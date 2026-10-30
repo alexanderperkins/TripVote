@@ -6,7 +6,7 @@ import { logger } from './config/logger.js';
 const env = loadEnv();
 await connectDb(env.mongoUri);
 
-const app = createApp({ clientOrigin: env.clientOrigin });
+const app = createApp(env);
 app.listen(env.port, () => {
   logger.info(`API listening on http://localhost:${env.port}`);
 });

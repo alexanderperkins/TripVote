@@ -3,7 +3,7 @@ import { createApp } from '../../src/app.js';
 export const TEST_CONFIG = {
   clientOrigin: 'http://localhost:5173',
   jwtSecret: 'test-secret-that-is-long-enough-for-hs256',
-  jwtExpiresIn: '1h',
+  sessionTtlSeconds: 3600,
   isCookieSecure: false,
   authRateLimit: 1000,
 };

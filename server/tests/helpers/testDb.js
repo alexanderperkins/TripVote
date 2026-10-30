@@ -1,11 +1,10 @@
+import { randomUUID } from 'node:crypto';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { inject } from 'vitest';
 
-let mongoServer;
-
+// Each test file gets its own database on the shared in-memory server.
 export async function startTestDb() {
-  mongoServer = await MongoMemoryServer.create();
-  await mongoose.connect(mongoServer.getUri());
+  await mongoose.connect(inject('mongoUri'), { dbName: `test-${randomUUID()}` });
 }
 
 export async function clearTestDb() {
@@ -14,6 +13,6 @@ export async function clearTestDb() {
 }
 
 export async function stopTestDb() {
+  await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
-  await mongoServer.stop();
 }
