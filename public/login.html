@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in · TripVote</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="card">
+    <h1>Welcome back</h1>
+    <p class="subtitle">Log in to see your trips.</p>
+    <form data-auth="login" novalidate>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+      <p class="form-error" role="alert"></p>
+      <button type="submit">Log in</button>
+    </form>
+    <p class="switch">New to TripVote? <a href="/signup">Create an account</a></p>
+  </main>
+  <script src="/auth.js" type="module"></script>
+</body>
+</html>

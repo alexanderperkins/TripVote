@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign up · TripVote</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="card">
+    <h1>Create your account</h1>
+    <p class="subtitle">Plan trips with your friends on TripVote.</p>
+    <form data-auth="signup" novalidate>
+      <label for="displayName">Display name</label>
+      <input id="displayName" name="displayName" autocomplete="nickname" maxlength="50" required>
+      <p class="field-error" id="displayName-error" aria-live="polite"></p>
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+      <p class="field-error" id="email-error" aria-live="polite"></p>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+      <p class="field-error" id="password-error" aria-live="polite"></p>
+
+      <p class="form-error" role="alert"></p>
+      <button type="submit">Sign up</button>
+    </form>
+    <p class="switch">Already have an account? <a href="/login">Log in</a></p>
+  </main>
+  <script src="/auth.js" type="module"></script>
+</body>
+</html>

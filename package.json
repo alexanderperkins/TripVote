@@ -1,0 +1,23 @@
+{
+  "name": "tripvote",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Group trip planning: suggest activities, vote, and organize itineraries.",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.1"
+  }
+}

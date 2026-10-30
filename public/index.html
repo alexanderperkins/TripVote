@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TripVote</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="card">
+    <h1>TripVote</h1>
+    <p class="subtitle" id="greeting">Loading…</p>
+    <div id="signed-out" hidden>
+      <p><a href="/login">Log in</a> or <a href="/signup">create an account</a> to start planning.</p>
+    </div>
+    <button id="logout" hidden>Log out</button>
+  </main>
+  <script type="module">
+    const greeting = document.getElementById('greeting');
+    const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (res.ok) {
+      const { user } = await res.json();
+      greeting.textContent = `Signed in as ${user.displayName} (${user.email}).`;
+      const logout = document.getElementById('logout');
+      logout.hidden = false;
+      logout.addEventListener('click', async () => {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+        window.location.assign('/login');
+      });
+    } else {
+      greeting.textContent = 'Plan group trips together.';
+      document.getElementById('signed-out').hidden = false;
+    }
+  </script>
+</body>
+</html>
