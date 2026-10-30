@@ -135,7 +135,8 @@ We follow **red → green → refactor** and the git history must show it:
 - **Unit (Vitest):** pure logic in `services/` and `client/src/lib/` (dates, overlap, balances, money).
 - **Component (React Testing Library):** query by role and label like a user would; no snapshot-only tests.
 - **Integration (Supertest):** every endpoint, including the 401/403 cases for each role.
-- **E2E (Playwright):** one spec per key user flow in section 2.3.
+- **E2E (Playwright):** one spec per key user flow in section 2.3. An issue that adds or changes a
+  user-facing flow is not done until its spec in `e2e/` exists and passes.
 - Coverage goal: **80% lines** for `server/src/services` and `client/src/lib`; every endpoint has an integration test.
 - Tests never call real external services or the real Atlas database.
 
@@ -230,7 +231,10 @@ Component expectations:
 ### Security requirements
 
 - Passwords hashed with bcrypt (cost ≥ 10); never logged.
-- JWT in an httpOnly, Secure, SameSite cookie; short expiry; logout clears it.
+- JWT in an httpOnly, Secure, SameSite cookie; short expiry.
+- Logout must also invalidate the token on the server, not only clear the cookie (e.g. a `tokenVersion`
+  on the user that logout increments and `requireAuth` checks). An integration test must show that the
+  old token is rejected after logout.
 - Share codes are random and unguessable (e.g. `crypto.randomBytes`), never sequential IDs.
 - Viewers can never read itinerary, availability or budget data — enforced in the API and covered by tests.
 - Use `helmet`, CORS restricted to our own origin, and rate limiting on auth routes.
@@ -247,8 +251,8 @@ Component expectations:
 
 <!--
   Changelog — update when the rules change after the before/after test (HW3 Task 4).
-  - v1 (2026-10-29): first draft.
-  - v2 (2026-10-30): the first with-rules test installed outdated majors (Vite 6, zod 3, Mongoose 8)
-    because v1 listed them. Updated every version to the latest release, pinned exact versions and
-    added the rule to check the registry instead of guessing.
+  - v1 (2026-10-30): first version, used for the before/after test.
+  - v2 (2026-10-30): after the before/after test. Logout must invalidate the token on the server
+    (the test run only cleared the cookie), and every user-facing flow needs a passing Playwright spec
+    (the test run wrote none).
 -->
