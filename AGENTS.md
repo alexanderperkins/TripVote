@@ -12,7 +12,7 @@
 TripVote is a web app that lets a group of friends plan a trip in one place: agree on dates, propose and vote on
 activities, keep a shared itinerary with live updates, and track spending against a budget.
 
-- **PRD:** https://docs.google.com/document/d/1iHZIIQXjuXRsxHST-Pnsn6QM3NhG51EssCBFlDintzE/edit
+- **PRD:** [PRD.pdf](./PRD.pdf) or [https://docs.google.com/document/d/1iHZIIQXjuXRsxHST-Pnsn6QM3NhG51EssCBFlDintzE/edit]
 - **Mockup (clickable prototype):** https://claude.ai/artifact/VpeXpJRxvQ86tuiQuUA84L
 - **Backlog:** GitHub Issues + Project board "TripVote Scrum Board" (milestones Sprint 1, Sprint 2)
 
