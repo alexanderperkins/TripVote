@@ -31,24 +31,30 @@ Authorization is always checked on the **server**. Hiding a button in the UI is 
 
 ### 1.2 Tech stack
 
-<!-- Pin exact versions from package.json after `npm install` and update this table. -->
+Versions below were checked against the npm registry on 2026-10-30. Install **exactly** these versions
+(for example `npm install vite@8.3.5`). Do not pick versions from memory: AI training data is often a
+major version behind. For a package not listed here, run `npm view <package> version` first and use the
+latest stable release, then add it to this table in the same PR.
 
 | Layer | Choice | Version |
 | --- | --- | --- |
-| Runtime | Node.js LTS | 22.x |
-| Frontend | React + Vite, React Router | React 19.x, Vite 6.x (pin after install) |
-| Styling | Tailwind CSS | 4.x (pin after install) |
-| Backend | Express REST API | 5.x (pin after install) |
-| Database | MongoDB Atlas via Mongoose | Mongoose 8.x |
-| Validation | zod (shared schemas for request bodies) | 3.x |
-| Auth | JWT in an httpOnly, Secure, SameSite cookie; bcrypt for passwords | jsonwebtoken 9.x, bcrypt 5.x |
-| Live updates | TBD: Socket.IO (preferred) or Pusher | — |
-| Unit tests | Vitest + React Testing Library | Vitest 3.x |
-| API tests | Supertest + mongodb-memory-server | — |
-| E2E tests | Playwright | 1.x |
+| Runtime | Node.js LTS (`"engines": { "node": ">=24" }`) | 24.x LTS |
+| Frontend | React + Vite, React Router | react 19.3.1, react-dom 19.3.1, vite 8.3.5, @vitejs/plugin-react 6.1.2, react-router 8.5.1 |
+| Styling | Tailwind CSS (Vite plugin) | tailwindcss 4.3.3, @tailwindcss/vite 4.3.3 |
+| Backend | Express REST API | express 5.3.0, cookie-parser 1.4.7 |
+| Database | MongoDB Atlas via Mongoose | mongoose 9.11.4 |
+| Validation | zod (shared schemas for request bodies) | zod 4.6.7 |
+| Auth | JWT in an httpOnly, Secure, SameSite cookie; bcrypt for passwords | jsonwebtoken 9.0.3, bcrypt 6.0.0 |
+| Live updates | TBD: Socket.IO (preferred) or Pusher | socket.io 4.8.4 if chosen |
+| Unit tests | Vitest + React Testing Library | vitest 5.0.5, @testing-library/react 16.3.3 |
+| API tests | Supertest + mongodb-memory-server | supertest 7.3.1, mongodb-memory-server 11.3.0 |
+| E2E tests | Playwright | @playwright/test 1.64.1 |
 | CI | GitHub Actions | — |
 | Hosting | TBD: Render and/or Netlify, with a preview deploy for every PR | — |
 | API docs | OpenAPI 3 (swagger-jsdoc + swagger-ui-express at `/api/docs`) | — |
+
+Use exact versions in `package.json` (no `^` or `~`; set `save-exact=true` in `.npmrc`) and commit
+`package-lock.json`. Upgrading a package is its own `chore:` PR that also updates this table.
 
 Do not add another framework, ORM, CSS library, state library or test runner without asking first.
 
@@ -242,4 +248,7 @@ Component expectations:
 <!--
   Changelog — update when the rules change after the before/after test (HW3 Task 4).
   - v1 (2026-10-29): first draft.
+  - v2 (2026-10-30): the first with-rules test installed outdated majors (Vite 6, zod 3, Mongoose 8)
+    because v1 listed them. Updated every version to the latest release, pinned exact versions and
+    added the rule to check the registry instead of guessing.
 -->
