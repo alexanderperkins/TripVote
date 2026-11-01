@@ -91,7 +91,7 @@ Do not add another framework, ORM, CSS library, state library or test runner wit
 │       └── integration/        # Supertest against app.js + in-memory MongoDB
 ├── e2e/                        # Playwright specs, one per user flow
 ├── docs/                       # openapi.yaml, architecture and schema diagrams
-└── .github/                    # workflows, issue templates, PR template
+└── .github/                    # workflows, issue templates, pull_request_template.md
 ```
 
 Keep layers separate: routes never touch the database, controllers never contain business rules, models never
@@ -119,7 +119,8 @@ Money is stored as **integer cents**, never floats. Dates are stored in UTC; tri
 - **API responses:** success returns the resource as JSON; errors return
   `{ "error": { "code": "VALIDATION_ERROR", "message": "End date can't be before the start date." } }`
   with the right status (400 validation, 401 not logged in, 403 wrong role, 404 not found, 409 conflict).
-- Use `async/await`, never raw promise chains. No `console.log` left in committed code (use the logger).
+- Use `async/await`, never raw promise chains. No `console.log` left in committed code: use
+  `logger.info/warn/error` from `server/src/config/logger.js` (it is silent when `NODE_ENV=test`).
 - Functions do one thing; files over ~200 lines should be split.
 
 ### 1.6 Testing strategy (TDD is required)
