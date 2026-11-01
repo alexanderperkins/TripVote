@@ -1,3 +1,4 @@
+import dns from 'node:dns';
 import { existsSync } from 'node:fs';
 import { createApp } from './app.js';
 import { loadEnv } from './config/env.js';
@@ -10,6 +11,10 @@ if (existsSync('.env')) {
 }
 
 const env = loadEnv();
+
+if (env.dnsServers.length > 0) {
+  dns.setServers(env.dnsServers);
+}
 
 if (env.mongoUri) {
   await connectDb(env.mongoUri);

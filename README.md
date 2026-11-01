@@ -43,6 +43,9 @@ Each developer uses their own dev database; tests never touch it.
 Without `MONGODB_URI` the API still starts and logs a warning, so the framework can be run before the database
 exists. A local MongoDB (`mongodb://localhost:27017/tripvote-dev`) works too.
 
+If the API fails with `querySrv ECONNREFUSED`, Node could not look up the Atlas SRV record with your system DNS.
+Add `DNS_SERVERS=8.8.8.8,1.1.1.1` to `server/.env` and restart.
+
 ## Folder structure
 
 `client/` is the React + Vite frontend, `server/` is the Express API, `e2e/` holds Playwright specs and `docs/`
