@@ -18,4 +18,12 @@ describe('loadEnv', () => {
   it('allows starting without a database when MONGODB_URI is missing', () => {
     expect(loadEnv({}).mongoUri).toBe('');
   });
+
+  it('reads a comma-separated DNS_SERVERS list', () => {
+    expect(loadEnv({ DNS_SERVERS: '8.8.8.8, 1.1.1.1' }).dnsServers).toEqual(['8.8.8.8', '1.1.1.1']);
+  });
+
+  it('uses the system DNS when DNS_SERVERS is missing', () => {
+    expect(loadEnv({}).dnsServers).toEqual([]);
+  });
 });
