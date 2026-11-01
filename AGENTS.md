@@ -41,12 +41,13 @@ latest stable release, then add it to this table in the same PR.
 | Runtime | Node.js LTS (`"engines": { "node": ">=24" }`) | 24.x LTS |
 | Frontend | React + Vite, React Router | react 19.3.1, react-dom 19.3.1, vite 8.3.5, @vitejs/plugin-react 6.1.2, react-router 8.5.1 |
 | Styling | Tailwind CSS (Vite plugin) | tailwindcss 4.3.3, @tailwindcss/vite 4.3.3 |
-| Backend | Express REST API | express 5.3.0, cookie-parser 1.4.7 |
+| Backend | Express REST API | express 5.3.0, cookie-parser 1.4.7, helmet 8.3.0, cors 2.8.6, express-rate-limit 8.7.2 |
 | Database | MongoDB Atlas via Mongoose | mongoose 9.11.4 |
 | Validation | zod (shared schemas for request bodies) | zod 4.6.7 |
 | Auth | JWT in an httpOnly, Secure, SameSite cookie; bcrypt for passwords | jsonwebtoken 9.0.3, bcrypt 6.0.0 |
 | Live updates | TBD: Socket.IO (preferred) or Pusher | socket.io 4.8.4 if chosen |
-| Unit tests | Vitest + React Testing Library | vitest 5.0.5, @testing-library/react 16.3.3 |
+| Unit tests | Vitest + React Testing Library | vitest 5.0.5, @testing-library/react 16.3.3, @testing-library/jest-dom 7.0.1, @testing-library/user-event 14.6.8, jsdom 30.1.3 |
+| Lint / format | ESLint (flat config) + Prettier | eslint 10.13.0, @eslint/js 10.0.1, globals 17.13.0, eslint-plugin-react-hooks 7.1.1, eslint-plugin-react-refresh 0.5.7, prettier 3.9.10 |
 | API tests | Supertest + mongodb-memory-server | supertest 7.3.1, mongodb-memory-server 11.3.0 |
 | E2E tests | Playwright | @playwright/test 1.64.1 |
 | CI | GitHub Actions | — |
@@ -90,7 +91,7 @@ Do not add another framework, ORM, CSS library, state library or test runner wit
 │       └── integration/        # Supertest against app.js + in-memory MongoDB
 ├── e2e/                        # Playwright specs, one per user flow
 ├── docs/                       # openapi.yaml, architecture and schema diagrams
-└── .github/                    # workflows, issue templates, PR template
+└── .github/                    # workflows, issue templates, pull_request_template.md
 ```
 
 Keep layers separate: routes never touch the database, controllers never contain business rules, models never
@@ -118,7 +119,8 @@ Money is stored as **integer cents**, never floats. Dates are stored in UTC; tri
 - **API responses:** success returns the resource as JSON; errors return
   `{ "error": { "code": "VALIDATION_ERROR", "message": "End date can't be before the start date." } }`
   with the right status (400 validation, 401 not logged in, 403 wrong role, 404 not found, 409 conflict).
-- Use `async/await`, never raw promise chains. No `console.log` left in committed code (use the logger).
+- Use `async/await`, never raw promise chains. No `console.log` left in committed code: use
+  `logger.info/warn/error` from `server/src/config/logger.js` (it is silent when `NODE_ENV=test`).
 - Functions do one thing; files over ~200 lines should be split.
 
 ### 1.6 Testing strategy (TDD is required)

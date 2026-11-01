@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  --color-ink: #14213d;
+  --color-muted: #5a6478;
+  --color-primary: #2457d6;
+  --color-warning: #e07a1f;
+  --color-warning-text: #a84d0c;
+  --color-success: #1e7a4c;
+  --color-danger: #b42318;
+  --color-page: #f6f7f9;
+  --color-card: #ffffff;
+  --color-border: #e3e6ec;
+
+  --radius-card: 16px;
+}
+
+body {
+  @apply bg-page font-sans text-ink;
+}
