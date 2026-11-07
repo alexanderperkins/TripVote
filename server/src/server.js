@@ -19,10 +19,12 @@ if (env.dnsServers.length > 0) {
 if (env.mongoUri) {
   await connectDb(env.mongoUri);
 } else {
-  logger.warn('MONGODB_URI is not set: starting without a database. See README "MongoDB setup".');
+  logger.warn(
+    'MONGODB_URI is not set: sign up and log in will not work. See README "Getting started".',
+  );
 }
 
-const app = createApp({ clientOrigin: env.clientOrigin });
+const app = createApp(env);
 app.listen(env.port, () => {
   logger.info(`API listening on http://localhost:${env.port}`);
 });
