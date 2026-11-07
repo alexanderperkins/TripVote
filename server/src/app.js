@@ -3,6 +3,8 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { createAuthRouter } from './routes/authRoutes.js';
+import { createTripRouter } from './routes/tripRoutes.js';
+import { requireAuth } from './middleware/requireAuth.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
 const DEFAULT_CONFIG = {
@@ -26,6 +28,7 @@ export function createApp(overrides = {}) {
     res.json({ status: 'ok' });
   });
   app.use('/api/auth', createAuthRouter(config));
+  app.use('/api/trips', requireAuth, createTripRouter());
 
   app.use('/api', notFound);
   app.use(errorHandler);

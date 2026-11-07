@@ -6,6 +6,7 @@ import GuestOnly from './features/auth/GuestOnly.jsx';
 import UserMenu from './features/auth/UserMenu.jsx';
 import AuthPage from './pages/AuthPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
+import TripDetailPage from './pages/TripDetailPage.jsx';
 
 export default function App() {
   return (
@@ -37,6 +38,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <DashboardPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/trips/:tripId"
+            element={
+              <RequireAuth>
+                <TripDetailPage />
               </RequireAuth>
             }
           />
