@@ -31,7 +31,13 @@ npm install
 cp server/.env.example server/.env   # Windows: copy server\.env.example server\.env
 ```
 
-Open `server/.env` and set `MONGODB_URI` to your connection string. Never commit `.env`.
+Open `server/.env` and set:
+
+- `MONGODB_URI`: your connection string.
+- `JWT_SECRET`: a random secret of at least 32 characters. Generate one with
+  `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`.
+
+Never commit `.env`.
 
 ### 4. Run
 
@@ -48,7 +54,7 @@ If it fails with `querySrv ECONNREFUSED`, add `DNS_SERVERS=8.8.8.8,1.1.1.1` to `
 
 | Command | What it does |
 | --- | --- |
-| `npm test` | Runs all tests (they don't use your Atlas database) |
+| `npm test` | Runs all tests on a temporary in-memory MongoDB (the first run downloads it), not your Atlas database |
 | `npm run lint` | ESLint + Prettier check |
 | `npm run format` | Formats the code with Prettier |
 
