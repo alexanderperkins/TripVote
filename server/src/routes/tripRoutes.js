@@ -3,6 +3,7 @@ import {
   createTrip,
   listTrips,
   getTrip,
+  getTripByShareCode,
   updateTrip,
   deleteTrip,
 } from '../controllers/tripController.js';
@@ -18,6 +19,14 @@ export function createTripRouter() {
   router.get('/:tripId', requireTripRole(), getTrip);
   router.patch('/:tripId', requireTripRole('organizer'), validateBody(tripSchema), updateTrip);
   router.delete('/:tripId', requireTripRole('organizer'), deleteTrip);
+
+  return router;
+}
+
+export function createJoinRouter() {
+  const router = Router();
+
+  router.get('/:shareCode', getTripByShareCode);
 
   return router;
 }
