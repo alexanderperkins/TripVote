@@ -1,5 +1,6 @@
 import { Trip } from '../models/Trip.js';
 import { TripMembership } from '../models/TripMembership.js';
+import { AppError } from './errors.js';
 
 function tripFields(trip) {
   return {
@@ -44,6 +45,7 @@ export async function getTrip(tripId, role) {
 
   return {
     ...tripFields(trip),
+    shareCode: trip.shareCode,
     role,
     members: memberships
       .filter((membership) => membership.user)
@@ -52,6 +54,30 @@ export async function getTrip(tripId, role) {
         name: membership.user.name,
         role: membership.role,
       })),
+  };
+}
+
+export async function getTripByShareCode(shareCode) {
+  const trip = await Trip.findOne({ shareCode });
+  if (!trip) {
+    throw new AppError(404, 'NOT_FOUND', 'This invite link is invalid.');
+  }
+
+  const memberships = await TripMembership.find({ trip: trip._id, status: 'active' }).populate({
+    path: 'user',
+    select: 'name',
+  });
+  const members = memberships
+    .filter((membership) => membership.user)
+    .map((membership) => ({ name: membership.user.name, role: membership.role }));
+  const organizer = members.find((member) => member.role === 'organizer');
+
+  return {
+    name: trip.name,
+    organizerName: organizer?.name ?? '',
+    startDate: trip.startDate,
+    endDate: trip.endDate,
+    members,
   };
 }
 
