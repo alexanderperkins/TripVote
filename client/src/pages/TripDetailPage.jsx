@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ApiError } from '../api/client.js';
+import { removeMember } from '../api/members.js';
 import { deleteTrip, fetchTrip, updateTrip } from '../api/trips.js';
 import Button from '../components/Button.jsx';
 import LoadingState from '../components/LoadingState.jsx';
 import TextField from '../components/TextField.jsx';
 import FormError from '../features/auth/FormError.jsx';
+import TripPeople from '../features/members/TripPeople.jsx';
+import { useAuth } from '../hooks/useAuth.js';
 import { isEndBeforeStart } from '../lib/dates.js';
+
+const FALLBACK_ERROR = 'Something went wrong. Please try again.';
+
+function errorMessage(error) {
+  return error instanceof ApiError ? error.message : FALLBACK_ERROR;
+}
 
 function tripFields(trip) {
   return {
@@ -20,6 +29,7 @@ function tripFields(trip) {
 export default function TripDetailPage() {
   const { tripId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [trip, setTrip] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -42,9 +52,7 @@ export default function TripDetailPage() {
         }
       } catch (error) {
         if (isCurrent) {
-          setLoadError(
-            error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
-          );
+          setLoadError(errorMessage(error));
         }
       } finally {
         if (isCurrent) setIsLoading(false);
@@ -87,9 +95,7 @@ export default function TripDetailPage() {
       setTrip((current) => ({ ...current, ...updatedTrip }));
       setIsEditing(false);
     } catch (error) {
-      setFormError(
-        error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
-      );
+      setFormError(errorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -103,9 +109,24 @@ export default function TripDetailPage() {
       await deleteTrip(tripId);
       navigate('/trips');
     } catch (error) {
-      setFormError(
-        error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
-      );
+      setFormError(errorMessage(error));
+      setIsSaving(false);
+    }
+  }
+
+  function showError(error) {
+    setFormError(error ? errorMessage(error) : '');
+  }
+
+  async function handleLeave() {
+    if (!window.confirm('Leave this trip? You will need a new invite to rejoin.')) return;
+    setFormError('');
+    setIsSaving(true);
+    try {
+      await removeMember(tripId, user.id);
+      navigate('/trips');
+    } catch (error) {
+      showError(error);
       setIsSaving(false);
     }
   }
@@ -175,6 +196,11 @@ export default function TripDetailPage() {
             </Button>
           </>
         )}
+        {!isOrganizer && (
+          <Button variant="danger" disabled={isSaving} onClick={handleLeave}>
+            Leave trip
+          </Button>
+        )}
       </div>
 
       {isOrganizer && isEditing && (
@@ -219,24 +245,7 @@ export default function TripDetailPage() {
         </form>
       )}
 
-      <section className="mt-8">
-        <h2 className="text-xl font-bold">Members</h2>
-        {trip.members.length > 0 ? (
-          <ul className="mt-4 divide-y divide-border rounded-card border border-border bg-card px-4">
-            {trip.members.map((member) => (
-              <li
-                key={member.userId}
-                className="flex min-h-14 items-center justify-between gap-3 py-3"
-              >
-                <span>{member.name}</span>
-                <span className="text-sm capitalize text-muted">{member.role}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-3 text-muted">No members yet.</p>
-        )}
-      </section>
+      <TripPeople trip={trip} onTripChange={setTrip} onError={showError} />
     </section>
   );
 }
