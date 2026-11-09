@@ -1,6 +1,7 @@
 import { Trip } from '../models/Trip.js';
 import { TripMembership } from '../models/TripMembership.js';
 import { AppError } from './errors.js';
+import { getViewerStatus, listJoinRequests } from './membershipService.js';
 
 function tripFields(trip) {
   return {
@@ -43,10 +44,13 @@ export async function getTrip(tripId, role) {
     select: 'name',
   });
 
+  const joinRequests = role === 'organizer' ? { joinRequests: await listJoinRequests(tripId) } : {};
+
   return {
     ...tripFields(trip),
     shareCode: trip.shareCode,
     role,
+    ...joinRequests,
     members: memberships
       .filter((membership) => membership.user)
       .map((membership) => ({
@@ -57,7 +61,7 @@ export async function getTrip(tripId, role) {
   };
 }
 
-export async function getTripByShareCode(shareCode) {
+export async function getTripByShareCode(shareCode, userId) {
   const trip = await Trip.findOne({ shareCode });
   if (!trip) {
     throw new AppError(404, 'NOT_FOUND', 'This invite link is invalid.');
@@ -71,6 +75,7 @@ export async function getTripByShareCode(shareCode) {
     .filter((membership) => membership.user)
     .map((membership) => ({ name: membership.user.name, role: membership.role }));
   const organizer = members.find((member) => member.role === 'organizer');
+  const viewerStatus = await getViewerStatus(trip._id, userId);
 
   return {
     name: trip.name,
@@ -78,6 +83,9 @@ export async function getTripByShareCode(shareCode) {
     startDate: trip.startDate,
     endDate: trip.endDate,
     members,
+    viewerStatus,
+    // Only someone already in the trip learns its id, so they can open it.
+    ...(viewerStatus === 'member' && { tripId: trip._id.toString() }),
   };
 }
 

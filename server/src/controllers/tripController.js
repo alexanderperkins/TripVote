@@ -23,7 +23,7 @@ export async function getTrip(req, res) {
 }
 
 export async function getTripByShareCode(req, res) {
-  const trip = await getTripByShareCodeRecord(req.params.shareCode);
+  const trip = await getTripByShareCodeRecord(req.params.shareCode, req.user.id);
   res.json(trip);
 }
 
