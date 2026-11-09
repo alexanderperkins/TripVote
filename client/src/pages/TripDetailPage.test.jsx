@@ -1,5 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import TripDetailPage from './TripDetailPage.jsx';
 import { AuthContext } from '../features/auth/authContext.js';
@@ -11,6 +12,7 @@ const TRIP = {
   destination: 'Portugal',
   startDate: '2026-12-01',
   endDate: '2026-12-07',
+  shareCode: 'a1b2c3d4e5f678901234567890abcdef',
   role: 'member',
   members: [
     { userId: 'user-1', name: 'Ana Lopez', role: 'organizer' },
@@ -44,6 +46,22 @@ function renderTripDetail(role) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('TripDetailPage', () => {
+  it('copies the share link to the clipboard', async () => {
+    const user = userEvent.setup();
+    const clipboardWrite = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+
+    try {
+      renderTripDetail('member');
+      await user.click(await screen.findByRole('button', { name: /copy link/i }));
+
+      expect(clipboardWrite).toHaveBeenCalledWith(
+        `${window.location.origin}/join/${TRIP.shareCode}`,
+      );
+    } finally {
+      clipboardWrite.mockRestore();
+    }
+  });
+
   it('shows the trip members', async () => {
     renderTripDetail('member');
 
