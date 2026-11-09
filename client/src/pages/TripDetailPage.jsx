@@ -28,6 +28,7 @@ export default function TripDetailPage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     let isCurrent = true;
@@ -109,6 +110,20 @@ export default function TripDetailPage() {
     }
   }
 
+  async function handleCopyLink() {
+    setFormError('');
+    setIsCopied(false);
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/join/${encodeURIComponent(trip.shareCode)}`,
+      );
+      setIsCopied(true);
+      window.setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      setFormError('Unable to copy the invite link. Please copy it from your browser address bar.');
+    }
+  }
+
   if (isLoading) return <LoadingState label="Loading trip…" />;
   if (loadError) return <FormError message={loadError} />;
   if (!trip || !values) return null;
@@ -132,25 +147,35 @@ export default function TripDetailPage() {
 
       <FormError message={formError} />
 
-      {isOrganizer && (
-        <div className="mt-6 flex gap-3">
-          <Button
-            variant="secondary"
-            disabled={isSaving}
-            onClick={() => {
-              setValues(tripFields(trip));
-              setFieldErrors({});
-              setFormError('');
-              setIsEditing((current) => !current);
-            }}
-          >
-            {isEditing ? 'Cancel edit' : 'Edit'}
-          </Button>
-          <Button variant="secondary" disabled={isSaving} onClick={handleDelete}>
-            Delete
-          </Button>
-        </div>
-      )}
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Button variant="secondary" onClick={handleCopyLink}>
+          Copy link
+        </Button>
+        {isCopied && (
+          <p role="status" className="self-center text-sm text-success">
+            Copied
+          </p>
+        )}
+        {isOrganizer && (
+          <>
+            <Button
+              variant="secondary"
+              disabled={isSaving}
+              onClick={() => {
+                setValues(tripFields(trip));
+                setFieldErrors({});
+                setFormError('');
+                setIsEditing((current) => !current);
+              }}
+            >
+              {isEditing ? 'Cancel edit' : 'Edit'}
+            </Button>
+            <Button variant="secondary" disabled={isSaving} onClick={handleDelete}>
+              Delete
+            </Button>
+          </>
+        )}
+      </div>
 
       {isOrganizer && isEditing && (
         <form

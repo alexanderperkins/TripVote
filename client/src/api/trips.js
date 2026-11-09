@@ -12,6 +12,10 @@ export function fetchTrip(tripId) {
   return apiRequest(`/api/trips/${encodeURIComponent(tripId)}`);
 }
 
+export function fetchJoinTrip(shareCode) {
+  return apiRequest(`/api/join/${encodeURIComponent(shareCode)}`);
+}
+
 export function updateTrip(tripId, trip) {
   return apiRequest(`/api/trips/${encodeURIComponent(tripId)}`, {
     method: 'PATCH',
