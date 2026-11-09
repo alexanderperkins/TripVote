@@ -47,13 +47,8 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('TripDetailPage', () => {
   it('copies the share link to the clipboard', async () => {
-    const clipboardWrite = vi.fn().mockResolvedValue();
-    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText: clipboardWrite },
-    });
     const user = userEvent.setup();
+    const clipboardWrite = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
 
     try {
       renderTripDetail('member');
@@ -63,11 +58,7 @@ describe('TripDetailPage', () => {
         `${window.location.origin}/join/${TRIP.shareCode}`,
       );
     } finally {
-      if (clipboardDescriptor) {
-        Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
-      } else {
-        delete navigator.clipboard;
-      }
+      clipboardWrite.mockRestore();
     }
   });
 
