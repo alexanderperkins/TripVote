@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
+import { Trip } from '../../src/models/Trip.js';
 import { TripMembership } from '../../src/models/TripMembership.js';
 import { startTestDb, clearTestDb, stopTestDb } from '../helpers/testDb.js';
 import { createTestApp } from '../helpers/testApp.js';
@@ -50,6 +51,18 @@ describe('trips API', () => {
       expect(res.status).toBe(201);
       expect(res.body).toMatchObject({ ...validTrip, role: 'organizer' });
       expect(res.body.id).toBeTruthy();
+    });
+
+    it('assigns each trip a unique random share code', async () => {
+      const user = await createUser();
+      const firstTrip = await createTrip(user);
+      const secondTrip = await createTrip(user, { ...validTrip, name: 'Porto' });
+      const firstStoredTrip = await Trip.findById(firstTrip.body.id);
+      const secondStoredTrip = await Trip.findById(secondTrip.body.id);
+
+      expect(firstStoredTrip.shareCode).toMatch(/^[a-f0-9]{32}$/);
+      expect(secondStoredTrip.shareCode).toMatch(/^[a-f0-9]{32}$/);
+      expect(secondStoredTrip.shareCode).not.toBe(firstStoredTrip.shareCode);
     });
 
     it('rejects an end date before the start date', async () => {
@@ -136,6 +149,99 @@ describe('trips API', () => {
       const res = await request(app()).get('/api/trips/not-an-id').set('Cookie', user.cookie);
 
       expect(res.status).toBe(404);
+    });
+
+    it('includes the share code for Members and the Organizer', async () => {
+      const organizer = await createUser();
+      const member = await createUser();
+      const { body: trip } = await createTrip(organizer);
+      await addMember(trip.id, member.id);
+
+      const memberRes = await request(app())
+        .get(`/api/trips/${trip.id}`)
+        .set('Cookie', member.cookie);
+      const organizerRes = await request(app())
+        .get(`/api/trips/${trip.id}`)
+        .set('Cookie', organizer.cookie);
+
+      expect(memberRes.status).toBe(200);
+      expect(memberRes.body.shareCode).toMatch(/^[a-f0-9]{32}$/);
+      expect(organizerRes.status).toBe(200);
+      expect(organizerRes.body.shareCode).toBe(memberRes.body.shareCode);
+    });
+
+    it('does not disclose trip data to someone outside the trip', async () => {
+      const organizer = await createUser();
+      const someoneElse = await createUser();
+      const { body: trip } = await createTrip(organizer);
+
+      const res = await request(app())
+        .get(`/api/trips/${trip.id}`)
+        .set('Cookie', someoneElse.cookie);
+
+      expect(res.status).toBe(403);
+      expect(res.body).not.toHaveProperty('itinerary');
+      expect(res.body).not.toHaveProperty('availability');
+      expect(res.body).not.toHaveProperty('budget');
+    });
+  });
+
+  describe('GET /api/join/:shareCode', () => {
+    it('returns only the Viewer-safe trip details to a logged-in user', async () => {
+      const organizer = await createUser();
+      const member = await createUser();
+      const viewer = await createUser();
+      const { body: trip } = await createTrip(organizer);
+      await addMember(trip.id, member.id);
+      const storedTrip = await Trip.findById(trip.id);
+
+      const res = await request(app())
+        .get(`/api/join/${storedTrip.shareCode}`)
+        .set('Cookie', viewer.cookie);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        name: 'Lisbon',
+        organizerName: 'Test User',
+        startDate: '2026-12-01',
+        endDate: '2026-12-07',
+        members: expect.arrayContaining([
+          { name: 'Test User', role: 'organizer' },
+          { name: 'Test User', role: 'member' },
+        ]),
+        viewerStatus: 'none',
+      });
+      expect(res.body.members).toHaveLength(2);
+      expect(JSON.stringify(res.body)).not.toContain('email');
+      expect(JSON.stringify(res.body)).not.toContain('passwordHash');
+      expect(JSON.stringify(res.body)).not.toContain('shareCode');
+      expect(JSON.stringify(res.body)).not.toContain(trip.id);
+      expect(JSON.stringify(res.body)).not.toContain(organizer.id);
+      expect(JSON.stringify(res.body)).not.toContain(member.id);
+    });
+
+    it('returns 401 when the Viewer is logged out', async () => {
+      const organizer = await createUser();
+      const { body: trip } = await createTrip(organizer);
+      const storedTrip = await Trip.findById(trip.id);
+
+      const res = await request(app()).get(`/api/join/${storedTrip.shareCode}`);
+
+      expect(res.status).toBe(401);
+    });
+
+    it('returns a standard 404 error for an unknown share code', async () => {
+      const viewer = await createUser();
+
+      const res = await request(app())
+        .get('/api/join/unknown-share-code')
+        .set('Cookie', viewer.cookie);
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toEqual({
+        code: 'NOT_FOUND',
+        message: expect.any(String),
+      });
     });
   });
 
