@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { ApiError } from '../api/client.js';
 import { deleteTrip, fetchTrip, updateTrip } from '../api/trips.js';
 import Button from '../components/Button.jsx';
@@ -124,6 +124,14 @@ export default function TripDetailPage() {
           <p className="mt-2 text-sm text-muted">
             {trip.startDate} – {trip.endDate}
           </p>
+          <div className="mt-3">
+            <Link
+              to={`/trips/${tripId}/itinerary`}
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              Itinerary
+            </Link>
+          </div>
         </div>
         <span className="rounded-full bg-page px-3 py-1 text-sm font-semibold capitalize">
           {trip.role}
