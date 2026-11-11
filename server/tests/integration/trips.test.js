@@ -209,6 +209,7 @@ describe('trips API', () => {
           { name: 'Test User', role: 'organizer' },
           { name: 'Test User', role: 'member' },
         ]),
+        viewerStatus: 'none',
       });
       expect(res.body.members).toHaveLength(2);
       expect(JSON.stringify(res.body)).not.toContain('email');

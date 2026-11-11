@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import TripDetailPage from './TripDetailPage.jsx';
@@ -82,5 +82,132 @@ describe('TripDetailPage', () => {
     expect(await screen.findByText('Sam Rivera')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+  });
+});
+
+function jsonResponse(status, body) {
+  return new Response(body === undefined ? null : JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// Answers GET /api/trips/trip-1 with the trip, and each other call with the next queued response.
+function renderWithApi(trip, responses = []) {
+  const queue = [...responses];
+  const fetchMock = vi.fn(async (path, options) => {
+    if (path === '/api/trips/trip-1' && options.method === 'GET') return jsonResponse(200, trip);
+    return queue.shift() ?? jsonResponse(500, {});
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  render(
+    <MemoryRouter initialEntries={['/trips/trip-1']}>
+      <AuthContext.Provider value={{ user: trip.role === 'organizer' ? USER : MEMBER_USER }}>
+        <Routes>
+          <Route path="/trips/:tripId" element={<TripDetailPage />} />
+          <Route path="/trips" element={<h1>Your trips</h1>} />
+        </Routes>
+      </AuthContext.Provider>
+    </MemoryRouter>,
+  );
+
+  return fetchMock;
+}
+
+const MEMBER_USER = { id: 'user-2', name: 'Sam Rivera', email: 'sam@example.com' };
+const ORGANIZER_TRIP = {
+  ...TRIP,
+  role: 'organizer',
+  joinRequests: [{ userId: 'user-3', name: 'Casey Kim', requestedAt: '2026-11-01T10:00:00.000Z' }],
+};
+
+describe('TripDetailPage join requests and members', () => {
+  it('shows pending join requests with Approve and Deny to the Organizer', async () => {
+    renderWithApi(ORGANIZER_TRIP);
+
+    const requests = await screen.findByRole('region', { name: 'Join requests' });
+    expect(within(requests).getByText('Casey Kim')).toBeInTheDocument();
+    expect(within(requests).getByRole('button', { name: 'Approve Casey Kim' })).toBeInTheDocument();
+    expect(within(requests).getByRole('button', { name: 'Deny Casey Kim' })).toBeInTheDocument();
+  });
+
+  it('says when there are no join requests', async () => {
+    renderWithApi({ ...ORGANIZER_TRIP, joinRequests: [] });
+
+    const requests = await screen.findByRole('region', { name: 'Join requests' });
+    expect(within(requests).getByText(/no pending requests/i)).toBeInTheDocument();
+  });
+
+  it('moves an approved requester into the member list', async () => {
+    const user = userEvent.setup();
+    const fetchMock = renderWithApi(ORGANIZER_TRIP, [
+      jsonResponse(200, { userId: 'user-3', name: 'Casey Kim', role: 'member' }),
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: 'Approve Casey Kim' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/trips/trip-1/join-requests/user-3/approve',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    const members = screen.getByRole('region', { name: 'Members' });
+    expect(await within(members).findByText('Casey Kim')).toBeInTheDocument();
+    const requests = screen.getByRole('region', { name: 'Join requests' });
+    expect(within(requests).queryByText('Casey Kim')).not.toBeInTheDocument();
+  });
+
+  it('removes a denied request from the list', async () => {
+    const user = userEvent.setup();
+    const fetchMock = renderWithApi(ORGANIZER_TRIP, [jsonResponse(204)]);
+
+    await user.click(await screen.findByRole('button', { name: 'Deny Casey Kim' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/trips/trip-1/join-requests/user-3',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+    expect(await screen.findByText(/no pending requests/i)).toBeInTheDocument();
+    expect(screen.queryByText('Casey Kim')).not.toBeInTheDocument();
+  });
+
+  it('lets the Organizer remove a Member but not themselves', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const fetchMock = renderWithApi(ORGANIZER_TRIP, [jsonResponse(204)]);
+
+    const members = await screen.findByRole('region', { name: 'Members' });
+    expect(within(members).queryByRole('button', { name: 'Remove Ana Lopez' })).toBeNull();
+    await user.click(within(members).getByRole('button', { name: 'Remove Sam Rivera' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/trips/trip-1/members/user-2',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+    await waitFor(() => expect(within(members).queryByText('Sam Rivera')).not.toBeInTheDocument());
+    window.confirm.mockRestore();
+  });
+
+  it('shows a Member Leave trip instead of join requests or Remove buttons', async () => {
+    renderWithApi({ ...TRIP, role: 'member' });
+
+    expect(await screen.findByRole('button', { name: 'Leave trip' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Join requests' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^remove/i })).not.toBeInTheDocument();
+  });
+
+  it('takes a Member who leaves back to their trips', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const fetchMock = renderWithApi({ ...TRIP, role: 'member' }, [jsonResponse(204)]);
+
+    await user.click(await screen.findByRole('button', { name: 'Leave trip' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/trips/trip-1/members/user-2',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+    expect(await screen.findByRole('heading', { name: 'Your trips' })).toBeInTheDocument();
+    window.confirm.mockRestore();
   });
 });
