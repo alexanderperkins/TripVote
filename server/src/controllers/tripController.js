@@ -2,6 +2,7 @@ import {
   createTrip as createTripRecord,
   listTrips as listTripRecords,
   getTrip as getTripRecord,
+  getTripByShareCode as getTripByShareCodeRecord,
   updateTrip as updateTripRecord,
   deleteTrip as deleteTripRecord,
 } from '../services/tripService.js';
@@ -18,6 +19,11 @@ export async function listTrips(req, res) {
 
 export async function getTrip(req, res) {
   const trip = await getTripRecord(req.params.tripId, req.membership.role);
+  res.json(trip);
+}
+
+export async function getTripByShareCode(req, res) {
+  const trip = await getTripByShareCodeRecord(req.params.shareCode, req.user.id);
   res.json(trip);
 }
 

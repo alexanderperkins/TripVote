@@ -1,6 +1,7 @@
 const VARIANTS = {
   primary: 'bg-primary text-white hover:bg-primary/90',
   secondary: 'border border-border bg-card text-ink hover:bg-page',
+  danger: 'border border-border bg-card text-danger hover:bg-danger/5',
 };
 
 export default function Button({ variant = 'primary', className = '', ...buttonProps }) {

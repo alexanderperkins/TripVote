@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ApiError } from '../api/client.js';
+import { removeMember } from '../api/members.js';
 import { deleteTrip, fetchTrip, updateTrip } from '../api/trips.js';
 import Button from '../components/Button.jsx';
 import LoadingState from '../components/LoadingState.jsx';
 import TextField from '../components/TextField.jsx';
 import FormError from '../features/auth/FormError.jsx';
+import TripPeople from '../features/members/TripPeople.jsx';
+import { useAuth } from '../hooks/useAuth.js';
 import { isEndBeforeStart } from '../lib/dates.js';
+
+const FALLBACK_ERROR = 'Something went wrong. Please try again.';
+
+function errorMessage(error) {
+  return error instanceof ApiError ? error.message : FALLBACK_ERROR;
+}
 
 function tripFields(trip) {
   return {
@@ -20,6 +29,7 @@ function tripFields(trip) {
 export default function TripDetailPage() {
   const { tripId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [trip, setTrip] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -28,6 +38,7 @@ export default function TripDetailPage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     let isCurrent = true;
@@ -41,9 +52,7 @@ export default function TripDetailPage() {
         }
       } catch (error) {
         if (isCurrent) {
-          setLoadError(
-            error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
-          );
+          setLoadError(errorMessage(error));
         }
       } finally {
         if (isCurrent) setIsLoading(false);
@@ -86,9 +95,7 @@ export default function TripDetailPage() {
       setTrip((current) => ({ ...current, ...updatedTrip }));
       setIsEditing(false);
     } catch (error) {
-      setFormError(
-        error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
-      );
+      setFormError(errorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -102,10 +109,39 @@ export default function TripDetailPage() {
       await deleteTrip(tripId);
       navigate('/trips');
     } catch (error) {
-      setFormError(
-        error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
-      );
+      setFormError(errorMessage(error));
       setIsSaving(false);
+    }
+  }
+
+  function showError(error) {
+    setFormError(error ? errorMessage(error) : '');
+  }
+
+  async function handleLeave() {
+    if (!window.confirm('Leave this trip? You will need a new invite to rejoin.')) return;
+    setFormError('');
+    setIsSaving(true);
+    try {
+      await removeMember(tripId, user.id);
+      navigate('/trips');
+    } catch (error) {
+      showError(error);
+      setIsSaving(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    setFormError('');
+    setIsCopied(false);
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/join/${encodeURIComponent(trip.shareCode)}`,
+      );
+      setIsCopied(true);
+      window.setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      setFormError('Unable to copy the invite link. Please copy it from your browser address bar.');
     }
   }
 
@@ -140,25 +176,40 @@ export default function TripDetailPage() {
 
       <FormError message={formError} />
 
-      {isOrganizer && (
-        <div className="mt-6 flex gap-3">
-          <Button
-            variant="secondary"
-            disabled={isSaving}
-            onClick={() => {
-              setValues(tripFields(trip));
-              setFieldErrors({});
-              setFormError('');
-              setIsEditing((current) => !current);
-            }}
-          >
-            {isEditing ? 'Cancel edit' : 'Edit'}
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Button variant="secondary" onClick={handleCopyLink}>
+          Copy link
+        </Button>
+        {isCopied && (
+          <p role="status" className="self-center text-sm text-success">
+            Copied
+          </p>
+        )}
+        {isOrganizer && (
+          <>
+            <Button
+              variant="secondary"
+              disabled={isSaving}
+              onClick={() => {
+                setValues(tripFields(trip));
+                setFieldErrors({});
+                setFormError('');
+                setIsEditing((current) => !current);
+              }}
+            >
+              {isEditing ? 'Cancel edit' : 'Edit'}
+            </Button>
+            <Button variant="secondary" disabled={isSaving} onClick={handleDelete}>
+              Delete
+            </Button>
+          </>
+        )}
+        {!isOrganizer && (
+          <Button variant="danger" disabled={isSaving} onClick={handleLeave}>
+            Leave trip
           </Button>
-          <Button variant="secondary" disabled={isSaving} onClick={handleDelete}>
-            Delete
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {isOrganizer && isEditing && (
         <form
@@ -202,24 +253,7 @@ export default function TripDetailPage() {
         </form>
       )}
 
-      <section className="mt-8">
-        <h2 className="text-xl font-bold">Members</h2>
-        {trip.members.length > 0 ? (
-          <ul className="mt-4 divide-y divide-border rounded-card border border-border bg-card px-4">
-            {trip.members.map((member) => (
-              <li
-                key={member.userId}
-                className="flex min-h-14 items-center justify-between gap-3 py-3"
-              >
-                <span>{member.name}</span>
-                <span className="text-sm capitalize text-muted">{member.role}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-3 text-muted">No members yet.</p>
-        )}
-      </section>
+      <TripPeople trip={trip} onTripChange={setTrip} onError={showError} />
     </section>
   );
 }
