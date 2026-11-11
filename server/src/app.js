@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { createAuthRouter } from './routes/authRoutes.js';
 import { createTripRouter } from './routes/tripRoutes.js';
+import { createItineraryRouter } from './routes/itineraryRoutes.js';
 import { requireAuth } from './middleware/requireAuth.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
@@ -29,6 +30,7 @@ export function createApp(overrides = {}) {
   });
   app.use('/api/auth', createAuthRouter(config));
   app.use('/api/trips', requireAuth, createTripRouter());
+  app.use('/api/trips/:tripId/itinerary', requireAuth, createItineraryRouter());
 
   app.use('/api', notFound);
   app.use(errorHandler);
