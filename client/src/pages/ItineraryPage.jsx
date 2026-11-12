@@ -2,13 +2,21 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { ApiError } from '../api/client.js';
 import { fetchTrip } from '../api/trips.js';
-import { fetchActivities, deleteActivity, updateActivity } from '../api/itinerary.js';
+import {
+  addVote,
+  fetchActivities,
+  deleteActivity,
+  removeVote,
+  updateActivity,
+} from '../api/itinerary.js';
 import Button from '../components/Button.jsx';
 import LoadingState from '../components/LoadingState.jsx';
 import TextField from '../components/TextField.jsx';
 import FormError from '../features/auth/FormError.jsx';
 import AddActivityForm from '../features/itinerary/AddActivityForm.jsx';
+import VoteButton from '../features/itinerary/VoteButton.jsx';
 import { useAuth } from '../hooks/useAuth.js';
+import { toggleVote } from '../lib/votes.js';
 
 function EditActivityForm({ tripId, activity, onSaved, onCancel }) {
   const [values, setValues] = useState({
@@ -172,6 +180,28 @@ export default function ItineraryPage() {
     }
   }
 
+  function setActivityVotes(activityId, votes) {
+    setActivities((current) => current.map((a) => (a.id === activityId ? { ...a, votes } : a)));
+  }
+
+  async function handleToggleVote(activity) {
+    const previousVotes = activity.votes;
+    const wasVoted = Boolean(previousVotes?.hasVoted);
+    setActionError('');
+    setActivityVotes(activity.id, toggleVote(previousVotes, user));
+    try {
+      const updated = wasVoted
+        ? await removeVote(tripId, activity.id)
+        : await addVote(tripId, activity.id);
+      setActivityVotes(activity.id, updated.votes);
+    } catch (error) {
+      setActivityVotes(activity.id, previousVotes);
+      setActionError(
+        error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
+      );
+    }
+  }
+
   if (isLoading) return <LoadingState label="Loading itinerary…" />;
   if (loadError) return <FormError message={loadError} />;
   if (!trip) return null;
@@ -279,6 +309,12 @@ export default function ItineraryPage() {
                       </div>
 
                       {activity.notes && <p className="text-sm text-muted">{activity.notes}</p>}
+
+                      <VoteButton
+                        activityTitle={activity.title}
+                        votes={activity.votes}
+                        onToggle={() => handleToggleVote(activity)}
+                      />
 
                       {activity.addedBy?.name && (
                         <div className="text-xs text-muted">
