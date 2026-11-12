@@ -1,3 +1,4 @@
+import { notifyMemberRemoved } from '../realtime/tripEvents.js';
 import {
   requestToJoin as createJoinRequest,
   approveJoinRequest as approveJoinRequestRecord,
@@ -22,5 +23,6 @@ export async function denyJoinRequest(req, res) {
 
 export async function removeMember(req, res) {
   await removeMemberRecord(req.params.tripId, req.params.userId, req.membership);
+  await notifyMemberRemoved(req, req.params.userId);
   res.status(204).end();
 }
