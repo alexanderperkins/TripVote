@@ -3,10 +3,12 @@ import { ApiError } from '../api/client.js';
 import { fetchTrips } from '../api/trips.js';
 import Button from '../components/Button.jsx';
 import LoadingState from '../components/LoadingState.jsx';
+import Modal from '../components/Modal.jsx';
 import FormError from '../features/auth/FormError.jsx';
-import NewTripForm from '../features/trips/NewTripForm.jsx';
+import NewTripWizard from '../features/trips/NewTripWizard.jsx';
 import TripCard from '../features/trips/TripCard.jsx';
 import { useAuth } from '../hooks/useAuth.js';
+import { pickNextTrip, todayIso } from '../lib/trips.js';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -39,47 +41,75 @@ export default function DashboardPage() {
     };
   }, []);
 
-  async function handleCreatedTrip(trip) {
+  function handleCreatedTrip(trip) {
     setTrips((current) => [{ ...trip, memberCount: 1 }, ...current]);
-    setIsCreatingTrip(false);
   }
 
+  const today = todayIso();
+  const nextTrip = pickNextTrip(trips, today);
+  const otherTrips = trips
+    .filter((trip) => trip !== nextTrip)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const firstName = user.name.split(' ')[0];
+
   return (
-    <section>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <section className="flex flex-col gap-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Your trips</h1>
-          <p className="mt-1 text-muted">Signed in as {user.name}</p>
+          <p className="text-muted">Hi {firstName}</p>
+          <h1 className="text-3xl font-extrabold">Your trips</h1>
         </div>
-        <Button onClick={() => setIsCreatingTrip((current) => !current)}>
-          {isCreatingTrip ? 'Cancel' : 'New trip'}
+        <Button onClick={() => setIsCreatingTrip(true)}>
+          <span aria-hidden="true">+&nbsp;</span>New trip
         </Button>
       </div>
 
-      {isCreatingTrip && (
-        <div className="mt-6 rounded-card border border-border bg-card p-6">
-          <h2 className="mb-4 text-xl font-bold">Create a trip</h2>
-          <NewTripForm onCreated={handleCreatedTrip} />
+      {loadError && <FormError message={loadError} />}
+
+      {isLoading ? (
+        <LoadingState label="Loading trips…" />
+      ) : trips.length > 0 ? (
+        <>
+          {nextTrip && (
+            <section aria-labelledby="next-trip-heading" className="flex flex-col gap-3">
+              <h2
+                id="next-trip-heading"
+                className="text-sm font-bold tracking-wide text-muted uppercase"
+              >
+                Next up
+              </h2>
+              <TripCard trip={nextTrip} featured today={today} />
+            </section>
+          )}
+          {otherTrips.length > 0 && (
+            <section aria-labelledby="other-trips-heading" className="flex flex-col gap-3">
+              <h2
+                id="other-trips-heading"
+                className="text-sm font-bold tracking-wide text-muted uppercase"
+              >
+                {nextTrip ? 'Other trips' : 'Past trips'}
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {otherTrips.map((trip) => (
+                  <TripCard key={trip.id} trip={trip} today={today} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      ) : (
+        <div className="flex flex-col items-center gap-3 rounded-card border border-border bg-card p-8 text-center">
+          <p className="font-semibold">No trips yet</p>
+          <p className="text-muted">Trips you create or join will appear here.</p>
+          <Button onClick={() => setIsCreatingTrip(true)}>Plan your first trip</Button>
         </div>
       )}
 
-      <div className="mt-6">
-        {loadError && <FormError message={loadError} />}
-        {isLoading ? (
-          <LoadingState label="Loading trips…" />
-        ) : trips.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {trips.map((trip) => (
-              <TripCard key={trip.id} trip={trip} />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-card border border-border bg-card p-8 text-center">
-            <p className="font-semibold">No trips yet</p>
-            <p className="mt-1 text-muted">Trips you create or join will appear here.</p>
-          </div>
-        )}
-      </div>
+      {isCreatingTrip && (
+        <Modal title="New trip" onClose={() => setIsCreatingTrip(false)}>
+          <NewTripWizard onCreated={handleCreatedTrip} onClose={() => setIsCreatingTrip(false)} />
+        </Modal>
+      )}
     </section>
   );
 }

@@ -14,16 +14,30 @@ const STATES = {
   },
 };
 
-export default function ConnectionStatus({ status }) {
+// tone="cover" is for the dark trip banner at the top of trip pages.
+export default function ConnectionStatus({ status, tone = 'page' }) {
   const state = STATES[status] ?? STATES.connecting;
 
   return (
     <div role="status" aria-live="polite" className="flex flex-col items-end gap-1">
-      <span className="inline-flex items-center gap-2 rounded-full bg-page px-3 py-1 text-sm font-semibold text-ink">
-        <span aria-hidden="true" className={`h-2 w-2 rounded-full ${state.dot}`} />
+      <span
+        className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${
+          tone === 'cover' ? 'bg-white/15 text-white' : 'bg-page text-ink'
+        }`}
+      >
+        <span
+          aria-hidden="true"
+          className={`h-2 w-2 rounded-full ${state.dot} ${status === 'live' ? 'animate-pulse' : ''}`}
+        />
         {state.label}
       </span>
-      {state.message && <p className="max-w-xs text-right text-sm text-muted">{state.message}</p>}
+      {state.message && (
+        <p
+          className={`max-w-xs text-right text-sm ${tone === 'cover' ? 'text-white/90' : 'text-muted'}`}
+        >
+          {state.message}
+        </p>
+      )}
     </div>
   );
 }
