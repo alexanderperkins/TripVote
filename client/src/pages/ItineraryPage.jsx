@@ -1,131 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { ApiError } from '../api/client.js';
 import { fetchTrip } from '../api/trips.js';
-import {
-  addVote,
-  fetchActivities,
-  deleteActivity,
-  removeVote,
-  updateActivity,
-} from '../api/itinerary.js';
+import { addVote, fetchActivities, deleteActivity, removeVote } from '../api/itinerary.js';
 import Button from '../components/Button.jsx';
 import LoadingState from '../components/LoadingState.jsx';
-import TextField from '../components/TextField.jsx';
+import ConnectionStatus from '../components/ConnectionStatus.jsx';
 import FormError from '../features/auth/FormError.jsx';
 import AddActivityForm from '../features/itinerary/AddActivityForm.jsx';
+import EditActivityForm from '../features/itinerary/EditActivityForm.jsx';
 import VoteButton from '../features/itinerary/VoteButton.jsx';
 import { useAuth } from '../hooks/useAuth.js';
+import { useTripSocket } from '../hooks/useTripSocket.js';
+import { applyVotes, removeActivity, upsertActivity } from '../lib/activities.js';
 import { toggleVote } from '../lib/votes.js';
-
-function EditActivityForm({ tripId, activity, onSaved, onCancel }) {
-  const [values, setValues] = useState({
-    title: activity.title,
-    date: activity.date,
-    time: activity.time,
-    location: activity.location ?? '',
-    notes: activity.notes ?? '',
-  });
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [formError, setFormError] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-
-  function handleChange(event) {
-    const { name, value } = event.target;
-    setValues((current) => ({ ...current, [name]: value }));
-    setFieldErrors((current) => ({ ...current, [name]: '' }));
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    const errors = {};
-    if (!values.title.trim()) errors.title = 'Enter a title.';
-    if (!values.date) errors.date = 'Enter a date.';
-    if (!values.time) errors.time = 'Enter a time.';
-    setFieldErrors(errors);
-    setFormError('');
-    if (Object.keys(errors).length > 0) return;
-
-    setIsSaving(true);
-    try {
-      const payload = {
-        title: values.title.trim(),
-        date: values.date,
-        time: values.time,
-        location: values.location.trim() || undefined,
-        notes: values.notes.trim() || undefined,
-      };
-      const updated = await updateActivity(tripId, activity.id, payload);
-      onSaved(updated);
-    } catch (error) {
-      setFormError(
-        error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  return (
-    <form
-      noValidate
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded-card border border-border bg-card p-4"
-    >
-      <FormError message={formError} />
-      <TextField
-        label="Title"
-        name="title"
-        value={values.title}
-        onChange={handleChange}
-        required
-        error={fieldErrors.title}
-      />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TextField
-          label="Date"
-          name="date"
-          type="date"
-          value={values.date}
-          onChange={handleChange}
-          required
-          error={fieldErrors.date}
-        />
-        <TextField
-          label="Time"
-          name="time"
-          type="time"
-          value={values.time}
-          onChange={handleChange}
-          required
-          error={fieldErrors.time}
-        />
-      </div>
-      <TextField
-        label="Location"
-        name="location"
-        value={values.location}
-        onChange={handleChange}
-        error={fieldErrors.location}
-      />
-      <TextField
-        label="Notes"
-        name="notes"
-        value={values.notes}
-        onChange={handleChange}
-        error={fieldErrors.notes}
-      />
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isSaving}>
-          Save
-        </Button>
-        <Button variant="secondary" disabled={isSaving} onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </form>
-  );
-}
 
 export default function ItineraryPage() {
   const { tripId } = useParams();
@@ -166,6 +54,27 @@ export default function ItineraryPage() {
       isCurrent = false;
     };
   }, [tripId]);
+
+  const userId = user?.id;
+  const liveStatus = useTripSocket(
+    tripId,
+    {
+      'activity:created': (activity) =>
+        setActivities((current) => upsertActivity(current, activity, userId)),
+      'activity:updated': (activity) =>
+        setActivities((current) => upsertActivity(current, activity, userId)),
+      'activity:deleted': ({ id }) => setActivities((current) => removeActivity(current, id)),
+      'activity:votes': ({ id, votes }) =>
+        setActivities((current) => applyVotes(current, id, votes, userId)),
+    },
+    useCallback(async () => {
+      try {
+        setActivities(await fetchActivities(tripId));
+      } catch {
+        // Keep what is on screen; the next live event or a reload will catch up.
+      }
+    }, [tripId]),
+  );
 
   async function handleDelete(activityId) {
     if (!window.confirm('Delete this activity?')) return;
@@ -243,9 +152,12 @@ export default function ItineraryPage() {
             {trip.startDate} – {trip.endDate}
           </p>
         </div>
-        <span className="rounded-full bg-page px-3 py-1 text-sm font-semibold capitalize">
-          {trip.role}
-        </span>
+        <div className="flex flex-col items-end gap-2">
+          <span className="rounded-full bg-page px-3 py-1 text-sm font-semibold capitalize">
+            {trip.role}
+          </span>
+          <ConnectionStatus status={liveStatus} />
+        </div>
       </div>
 
       <FormError message={actionError} />
@@ -253,7 +165,9 @@ export default function ItineraryPage() {
       <div className="mt-6">
         <AddActivityForm
           tripId={tripId}
-          onCreated={(newActivity) => setActivities((current) => [...current, newActivity])}
+          onCreated={(newActivity) =>
+            setActivities((current) => upsertActivity(current, newActivity, userId))
+          }
         />
       </div>
 

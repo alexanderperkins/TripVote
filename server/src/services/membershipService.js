@@ -104,3 +104,9 @@ export async function removeMember(tripId, userId, callerMembership) {
   }
   await membership.deleteOne();
 }
+
+export async function isActiveMember(tripId, userId) {
+  if (!mongoose.isValidObjectId(tripId)) return false;
+  const membership = await TripMembership.exists({ trip: tripId, user: userId, status: 'active' });
+  return Boolean(membership);
+}
