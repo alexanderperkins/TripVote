@@ -161,7 +161,7 @@ export default function NewTripWizard({ onCreated, onClose }) {
             autoFocus
             autoComplete="off"
           />
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Destination ideas">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Popular places">
             {IDEAS.map((idea) => (
               <button
                 key={idea}

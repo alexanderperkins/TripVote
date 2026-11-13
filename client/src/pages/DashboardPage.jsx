@@ -50,14 +50,13 @@ export default function DashboardPage() {
   const otherTrips = trips
     .filter((trip) => trip !== nextTrip)
     .sort((a, b) => a.startDate.localeCompare(b.startDate));
-  const firstName = user.name.split(' ')[0];
 
   return (
     <section className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-muted">Hi {firstName}</p>
           <h1 className="text-3xl font-extrabold">Your trips</h1>
+          <p className="mt-1 text-muted">Signed in as {user.name}</p>
         </div>
         <Button onClick={() => setIsCreatingTrip(true)}>
           <span aria-hidden="true">+&nbsp;</span>New trip

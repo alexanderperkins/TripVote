@@ -27,12 +27,12 @@ export async function logIn(page, user) {
 export async function createTrip(page, trip) {
   await page.getByRole('button', { name: 'New trip' }).click();
   const dialog = page.getByRole('dialog', { name: 'New trip' });
-  await dialog.getByLabel('Destination').fill(trip.destination);
+  await dialog.getByLabel('Destination', { exact: true }).fill(trip.destination);
   await dialog.getByRole('button', { name: 'Next' }).click();
-  await dialog.getByLabel('Start date').fill(trip.startDate);
-  await dialog.getByLabel('End date').fill(trip.endDate);
+  await dialog.getByLabel('Start date', { exact: true }).fill(trip.startDate);
+  await dialog.getByLabel('End date', { exact: true }).fill(trip.endDate);
   await dialog.getByRole('button', { name: 'Next' }).click();
-  await dialog.getByLabel('Name').fill(trip.name);
+  await dialog.getByLabel('Name', { exact: true }).fill(trip.name);
   await dialog.getByRole('button', { name: 'Create trip' }).click();
   await expect(dialog.getByText(`${trip.name} is ready`)).toBeVisible();
   await dialog.getByRole('button', { name: 'Done' }).click();
