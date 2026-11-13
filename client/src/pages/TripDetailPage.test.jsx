@@ -92,11 +92,15 @@ function jsonResponse(status, body) {
   });
 }
 
-// Answers GET /api/trips/trip-1 with the trip, and each other call with the next queued response.
-function renderWithApi(trip, responses = []) {
+// Answers GET /api/trips/trip-1 with the trip, GET .../itinerary with the activities,
+// and each other call with the next queued response.
+function renderWithApi(trip, responses = [], activities = []) {
   const queue = [...responses];
   const fetchMock = vi.fn(async (path, options) => {
     if (path === '/api/trips/trip-1' && options.method === 'GET') return jsonResponse(200, trip);
+    if (path === '/api/trips/trip-1/itinerary' && options.method === 'GET') {
+      return jsonResponse(200, activities);
+    }
     return queue.shift() ?? jsonResponse(500, {});
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -209,5 +213,51 @@ describe('TripDetailPage join requests and members', () => {
     );
     expect(await screen.findByRole('heading', { name: 'Your trips' })).toBeInTheDocument();
     window.confirm.mockRestore();
+  });
+});
+
+describe('TripDetailPage overview', () => {
+  const votes = (count) => ({
+    count,
+    voters: Array.from({ length: count }, (_, i) => ({ userId: `u${i}`, name: `Voter ${i}` })),
+    hasVoted: false,
+  });
+  const ACTIVITIES = [
+    { id: 'a1', title: 'Tram 28', date: '2026-12-01', time: '15:00', votes: votes(1) },
+    { id: 'a2', title: 'Time Out Market', date: '2026-12-02', time: '19:00', votes: votes(2) },
+    { id: 'a3', title: 'Museum', date: '2026-12-03', time: '10:00', votes: votes(0) },
+  ];
+
+  it('shows the trip header with tabs and the invite link', async () => {
+    renderWithApi(ORGANIZER_TRIP);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Lisbon' })).toBeInTheDocument();
+    const tabs = screen.getByRole('navigation', { name: 'Trip sections' });
+    expect(within(tabs).getByRole('link', { name: /overview/i })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(tabs).getByRole('link', { name: 'Itinerary' })).toHaveAttribute(
+      'href',
+      '/trips/trip-1/itinerary',
+    );
+    expect(
+      within(tabs).getByRole('link', { name: /Overview\s*1\s*join requests/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`${window.location.origin}/join/${TRIP.shareCode}`),
+    ).toBeInTheDocument();
+  });
+
+  it('lists the most-voted activities as group favorites', async () => {
+    renderWithApi({ ...TRIP, role: 'member' }, [], ACTIVITIES);
+
+    const favorites = await screen.findByRole('region', { name: 'Group favorites' });
+    await waitFor(() => expect(within(favorites).getByText('Time Out Market')).toBeInTheDocument());
+    const titles = within(favorites)
+      .getAllByText(/Tram 28|Time Out Market|Museum/)
+      .map((node) => node.textContent);
+    expect(titles).toEqual(['Time Out Market', 'Tram 28']);
+    expect(within(favorites).getByText('2 votes')).toBeInTheDocument();
   });
 });

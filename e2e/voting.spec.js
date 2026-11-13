@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { createTrip, LISBON_TRIP, newUser, openTrip, signUp } from './support/helpers.js';
+import {
+  addActivity,
+  createTrip,
+  LISBON_TRIP,
+  newUser,
+  openTrip,
+  signUp,
+} from './support/helpers.js';
 
 // Flow 3 in AGENTS.md: a Member adds an activity and other Members vote on it.
 test.describe('voting on itinerary activities (#9)', () => {
@@ -32,10 +39,7 @@ test.describe('voting on itinerary activities (#9)', () => {
     await expect(page.getByRole('region', { name: 'Members' })).toContainText('Casey');
 
     await page.getByRole('link', { name: 'Itinerary' }).click();
-    await page.getByLabel('Title').fill('Tram 28');
-    await page.getByLabel('Date').fill('2027-06-10');
-    await page.getByLabel('Time').fill('15:00');
-    await page.getByRole('button', { name: 'Add activity' }).click();
+    await addActivity(page, { title: 'Tram 28', date: '2027-06-10', time: '15:00' });
     await expect(page.getByRole('heading', { name: 'Tram 28' })).toBeVisible();
     itineraryUrl = page.url();
   });
@@ -53,31 +57,34 @@ test.describe('voting on itinerary activities (#9)', () => {
   test('Members vote, see the count and voters, and can remove their vote', async () => {
     const memberCard = tramCard(member.page);
     await member.page.goto(itineraryUrl);
-    await expect(memberCard).toContainText('No votes yet');
+    // Whoever adds an activity votes for it automatically.
+    await expect(memberCard).toContainText('1 vote');
+    await expect(memberCard).toContainText('Voted by Jordan');
 
     const voteButton = memberCard.getByRole('button', { name: 'Vote for Tram 28' });
+    await expect(voteButton).toHaveAttribute('aria-pressed', 'false');
     await voteButton.click();
     await expect(voteButton).toHaveAttribute('aria-pressed', 'true');
-    await expect(memberCard).toContainText('1 vote');
-    await expect(memberCard).toContainText('Voted by Casey');
+    await expect(memberCard).toContainText('2 votes');
+    await expect(memberCard).toContainText('Voted by Jordan, Casey');
 
     await organizerPage.reload();
     const organizerCard = tramCard(organizerPage);
+    await expect(organizerCard).toContainText('2 votes');
+    const organizerVote = organizerCard.getByRole('button', { name: 'Vote for Tram 28' });
+    await expect(organizerVote).toHaveAttribute('aria-pressed', 'true');
+    await organizerVote.click();
     await expect(organizerCard).toContainText('1 vote');
     await expect(organizerCard).toContainText('Voted by Casey');
-    await organizerCard.getByRole('button', { name: 'Vote for Tram 28' }).click();
-    await expect(organizerCard).toContainText('2 votes');
-    await expect(organizerCard).toContainText('Voted by Casey, Jordan');
 
     await member.page.reload();
-    await expect(memberCard).toContainText('2 votes');
+    await expect(memberCard).toContainText('1 vote');
     await voteButton.click();
     await expect(voteButton).toHaveAttribute('aria-pressed', 'false');
-    await expect(memberCard).toContainText('1 vote');
-    await expect(memberCard).toContainText('Voted by Jordan');
+    await expect(memberCard).toContainText('No votes yet');
 
     await member.page.reload();
-    await expect(memberCard).toContainText('Voted by Jordan');
+    await expect(memberCard).toContainText('No votes yet');
     await expect(voteButton).toHaveAttribute('aria-pressed', 'false');
   });
 });

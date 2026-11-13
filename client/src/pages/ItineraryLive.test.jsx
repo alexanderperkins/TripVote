@@ -2,6 +2,7 @@ import { afterEach, describe, it, expect, vi } from 'vitest';
 import { act, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import ItineraryPage from './ItineraryPage.jsx';
+import ToastProvider from '../components/ToastProvider.jsx';
 import { AuthContext } from '../features/auth/authContext.js';
 import { connectSocket, dropSocket, lastSocket } from '../test/fakeSocket.js';
 
@@ -53,9 +54,11 @@ function renderItinerary({ activities = [TRAM] } = {}) {
   const view = render(
     <MemoryRouter initialEntries={['/trips/trip-1/itinerary']}>
       <AuthContext.Provider value={{ user: USER }}>
-        <Routes>
-          <Route path="/trips/:tripId/itinerary" element={<ItineraryPage />} />
-        </Routes>
+        <ToastProvider>
+          <Routes>
+            <Route path="/trips/:tripId/itinerary" element={<ItineraryPage />} />
+          </Routes>
+        </ToastProvider>
       </AuthContext.Provider>
     </MemoryRouter>,
   );
@@ -99,8 +102,19 @@ describe('ItineraryPage live updates', () => {
 
     serverSends('activity:created', MUSEUM);
 
-    expect(screen.getByRole('heading', { name: 'Museum' })).toBeInTheDocument();
-    expect(screen.getByText('2026-12-02')).toBeInTheDocument();
+    const day2 = screen.getByRole('region', { name: 'Day 2 · Wed, Dec 2' });
+    expect(within(day2).getByRole('heading', { name: 'Museum' })).toBeInTheDocument();
+    expect(screen.getByText('Sam Rivera added Museum')).toBeInTheDocument();
+  });
+
+  it('tells the person who just voted, but not about their own vote', async () => {
+    await renderConnected();
+
+    serverSends('activity:votes', { id: 'activity-1', votes: { count: 1, voters: [ANA] } });
+    expect(screen.queryByText(/voted for Tram 28/)).not.toBeInTheDocument();
+
+    serverSends('activity:votes', { id: 'activity-1', votes: { count: 2, voters: [ANA, SAM] } });
+    expect(screen.getByText('Sam Rivera voted for Tram 28')).toBeInTheDocument();
   });
 
   it('does not show the same activity twice', async () => {
