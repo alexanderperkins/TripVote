@@ -23,14 +23,35 @@ export async function logIn(page, user) {
   await page.getByRole('button', { name: 'Log in' }).click();
 }
 
+// Goes through the three-step New trip dialog, then closes it on the "ready" screen.
 export async function createTrip(page, trip) {
   await page.getByRole('button', { name: 'New trip' }).click();
-  await page.getByLabel('Name').fill(trip.name);
-  await page.getByLabel('Destination').fill(trip.destination);
-  await page.getByLabel('Start date').fill(trip.startDate);
-  await page.getByLabel('End date').fill(trip.endDate);
-  await page.getByRole('button', { name: 'Create trip' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New trip' });
+  await dialog.getByLabel('Destination', { exact: true }).fill(trip.destination);
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByLabel('Start date', { exact: true }).fill(trip.startDate);
+  await dialog.getByLabel('End date', { exact: true }).fill(trip.endDate);
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByLabel('Name', { exact: true }).fill(trip.name);
+  await dialog.getByRole('button', { name: 'Create trip' }).click();
+  await expect(dialog.getByText(`${trip.name} is ready`)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('link', { name: new RegExp(trip.name) })).toBeVisible();
+}
+
+// Opens the Add activity dialog on the itinerary page and submits it.
+export async function addActivity(page, activity) {
+  await page.getByRole('button', { name: 'Add activity' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add activity' });
+  await dialog.getByLabel('Title').fill(activity.title);
+  await dialog.getByLabel('Date').fill(activity.date);
+  await dialog.getByLabel('Time').fill(activity.time);
+  await dialog.getByRole('button', { name: 'Add activity' }).click();
+  await expect(dialog).toBeHidden();
+}
+
+export async function openActivityMenu(page, title) {
+  await page.getByRole('button', { name: `More actions for ${title}`, exact: true }).click();
 }
 
 export async function openTrip(page, tripName) {

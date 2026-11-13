@@ -54,7 +54,7 @@ export default function TripPeople({ trip, onTripChange, onError }) {
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       <MemberList
         members={trip.members}
         canRemove={isOrganizer}
@@ -69,6 +69,6 @@ export default function TripPeople({ trip, onTripChange, onError }) {
           onDeny={handleDeny}
         />
       )}
-    </>
+    </div>
   );
 }

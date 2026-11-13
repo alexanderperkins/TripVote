@@ -13,8 +13,9 @@ const INITIAL_VALUES = {
   notes: '',
 };
 
-export default function AddActivityForm({ tripId, onCreated }) {
-  const [values, setValues] = useState(INITIAL_VALUES);
+// The form inside the Add activity dialog. defaultDate is the day the person was looking at.
+export default function AddActivityForm({ tripId, defaultDate = '', onCreated, onCancel }) {
+  const [values, setValues] = useState({ ...INITIAL_VALUES, date: defaultDate });
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -46,7 +47,7 @@ export default function AddActivityForm({ tripId, onCreated }) {
       if (values.notes.trim()) payload.notes = values.notes.trim();
 
       const created = await createActivity(tripId, payload);
-      setValues(INITIAL_VALUES);
+      setValues({ ...INITIAL_VALUES, date: defaultDate });
       setFieldErrors({});
       onCreated?.(created);
     } catch (error) {
@@ -59,12 +60,7 @@ export default function AddActivityForm({ tripId, onCreated }) {
   }
 
   return (
-    <form
-      noValidate
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-4 rounded-card border border-border bg-card p-6"
-    >
-      <h2 className="text-xl font-bold text-ink">Add activity</h2>
+    <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
       <FormError message={formError} />
       <TextField
         label="Title"
@@ -96,6 +92,7 @@ export default function AddActivityForm({ tripId, onCreated }) {
       </div>
       <TextField
         label="Location"
+        placeholder="Neighborhood or address"
         name="location"
         value={values.location}
         onChange={handleChange}
@@ -103,14 +100,23 @@ export default function AddActivityForm({ tripId, onCreated }) {
       />
       <TextField
         label="Notes"
+        placeholder="Why it’s worth it, cost, booking info"
         name="notes"
         value={values.notes}
         onChange={handleChange}
         error={fieldErrors.notes}
       />
-      <Button type="submit" disabled={isSaving}>
-        Add activity
-      </Button>
+      <p className="text-sm text-muted">Your vote is added automatically.</p>
+      <div className="flex flex-wrap justify-end gap-2">
+        {onCancel && (
+          <Button variant="secondary" disabled={isSaving} onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" disabled={isSaving}>
+          Add activity
+        </Button>
+      </div>
     </form>
   );
 }

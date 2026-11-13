@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { fetchActivities } from '../api/itinerary.js';
 import { ApiError } from '../api/client.js';
 import { removeMember } from '../api/members.js';
 import { deleteTrip, fetchTrip, updateTrip } from '../api/trips.js';
 import Button from '../components/Button.jsx';
 import LoadingState from '../components/LoadingState.jsx';
 import TextField from '../components/TextField.jsx';
+import TripHeader from '../components/TripHeader.jsx';
 import FormError from '../features/auth/FormError.jsx';
 import TripPeople from '../features/members/TripPeople.jsx';
 import { useAuth } from '../hooks/useAuth.js';
+import { topActivities } from '../lib/activities.js';
 import { isEndBeforeStart } from '../lib/dates.js';
+import { formatDayLabel } from '../lib/trips.js';
 
 const FALLBACK_ERROR = 'Something went wrong. Please try again.';
 
@@ -39,6 +43,7 @@ export default function TripDetailPage() {
   const [formError, setFormError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [favorites, setFavorites] = useState([]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -59,7 +64,18 @@ export default function TripDetailPage() {
       }
     }
 
+    // Group favorites are a bonus: if they fail to load, the rest of the page still works.
+    async function loadFavorites() {
+      try {
+        const activities = await fetchActivities(tripId);
+        if (isCurrent) setFavorites(topActivities(activities));
+      } catch {
+        if (isCurrent) setFavorites([]);
+      }
+    }
+
     loadTrip();
+    loadFavorites();
     return () => {
       isCurrent = false;
     };
@@ -151,109 +167,154 @@ export default function TripDetailPage() {
 
   const isOrganizer = trip.role === 'organizer';
 
+  const shareUrl = `${window.location.origin}/join/${encodeURIComponent(trip.shareCode ?? '')}`;
+
   return (
-    <section>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{trip.name}</h1>
-          <p className="mt-1 text-muted">{trip.destination}</p>
-          <p className="mt-2 text-sm text-muted">
-            {trip.startDate} – {trip.endDate}
-          </p>
-          <div className="mt-3">
-            <Link
-              to={`/trips/${tripId}/itinerary`}
-              className="text-sm font-semibold text-primary hover:underline"
-            >
-              Itinerary
-            </Link>
-          </div>
-        </div>
-        <span className="rounded-full bg-page px-3 py-1 text-sm font-semibold capitalize">
-          {trip.role}
-        </span>
-      </div>
+    <section className="flex flex-col gap-6">
+      <TripHeader trip={trip} />
 
       <FormError message={formError} />
 
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Button variant="secondary" onClick={handleCopyLink}>
-          Copy link
-        </Button>
-        {isCopied && (
-          <p role="status" className="self-center text-sm text-success">
-            Copied
-          </p>
-        )}
-        {isOrganizer && (
-          <>
-            <Button
-              variant="secondary"
-              disabled={isSaving}
-              onClick={() => {
-                setValues(tripFields(trip));
-                setFieldErrors({});
-                setFormError('');
-                setIsEditing((current) => !current);
-              }}
+      <div className="grid items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <section
+            aria-labelledby="invite-heading"
+            className="flex flex-col gap-3 rounded-card bg-primary-soft p-5"
+          >
+            <h2 id="invite-heading" className="text-lg font-bold text-ink">
+              Invite friends
+            </h2>
+            <p className="text-sm text-muted">
+              Anyone with this link sees the trip basics and can ask to join.
+              {isOrganizer ? ' You decide who gets in.' : ' The organizer approves requests.'}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <code className="min-w-0 flex-1 truncate rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
+                {shareUrl}
+              </code>
+              <Button onClick={handleCopyLink}>Copy link</Button>
+              {isCopied && (
+                <p role="status" className="text-sm font-semibold text-success">
+                  Copied
+                </p>
+              )}
+            </div>
+          </section>
+
+          <TripPeople trip={trip} onTripChange={setTrip} onError={showError} />
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-6">
+          <section
+            aria-labelledby="favorites-heading"
+            className="flex flex-col gap-3 rounded-card border border-border bg-card p-5"
+          >
+            <h2 id="favorites-heading" className="text-lg font-bold text-ink">
+              Group favorites
+            </h2>
+            {favorites.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {favorites.map((activity) => (
+                  <div key={activity.id} className="flex items-center gap-3">
+                    <span className="shrink-0 rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-bold text-warning-text tabular-nums">
+                      {activity.votes.count} {activity.votes.count === 1 ? 'vote' : 'votes'}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-ink">{activity.title}</span>
+                      <span className="block text-sm text-muted">
+                        {formatDayLabel(activity.date)} · {activity.time}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted">
+                Add activities and vote on them; the most popular ones show up here.
+              </p>
+            )}
+            <Link
+              to={`/trips/${tripId}/itinerary`}
+              className="text-sm font-bold text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary"
             >
-              {isEditing ? 'Cancel edit' : 'Edit'}
-            </Button>
-            <Button variant="secondary" disabled={isSaving} onClick={handleDelete}>
-              Delete
-            </Button>
-          </>
-        )}
-        {!isOrganizer && (
-          <Button variant="danger" disabled={isSaving} onClick={handleLeave}>
-            Leave trip
-          </Button>
-        )}
+              See all activities<span aria-hidden="true"> →</span>
+            </Link>
+          </section>
+
+          <section
+            aria-labelledby="settings-heading"
+            className="flex flex-col gap-3 rounded-card border border-border bg-card p-5"
+          >
+            <h2 id="settings-heading" className="text-lg font-bold text-ink">
+              Trip settings
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {isOrganizer && (
+                <>
+                  <Button
+                    variant="secondary"
+                    disabled={isSaving}
+                    onClick={() => {
+                      setValues(tripFields(trip));
+                      setFieldErrors({});
+                      setFormError('');
+                      setIsEditing((current) => !current);
+                    }}
+                  >
+                    {isEditing ? 'Cancel edit' : 'Edit'}
+                  </Button>
+                  <Button variant="danger" disabled={isSaving} onClick={handleDelete}>
+                    Delete
+                  </Button>
+                </>
+              )}
+              {!isOrganizer && (
+                <Button variant="danger" disabled={isSaving} onClick={handleLeave}>
+                  Leave trip
+                </Button>
+              )}
+            </div>
+
+            {isOrganizer && isEditing && (
+              <form noValidate onSubmit={handleUpdate} className="flex flex-col gap-4">
+                <TextField
+                  label="Name"
+                  name="name"
+                  value={values.name}
+                  onChange={handleChange}
+                  error={fieldErrors.name}
+                />
+                <TextField
+                  label="Destination"
+                  name="destination"
+                  value={values.destination}
+                  onChange={handleChange}
+                  error={fieldErrors.destination}
+                />
+                <TextField
+                  label="Start date"
+                  name="startDate"
+                  type="date"
+                  value={values.startDate}
+                  onChange={handleChange}
+                  error={fieldErrors.startDate}
+                />
+                <TextField
+                  label="End date"
+                  name="endDate"
+                  type="date"
+                  value={values.endDate}
+                  onChange={handleChange}
+                  error={fieldErrors.endDate}
+                />
+                <Button type="submit" disabled={isSaving}>
+                  Save changes
+                </Button>
+              </form>
+            )}
+          </section>
+        </div>
       </div>
-
-      {isOrganizer && isEditing && (
-        <form
-          noValidate
-          onSubmit={handleUpdate}
-          className="mt-6 flex flex-col gap-4 rounded-card border border-border bg-card p-6"
-        >
-          <TextField
-            label="Name"
-            name="name"
-            value={values.name}
-            onChange={handleChange}
-            error={fieldErrors.name}
-          />
-          <TextField
-            label="Destination"
-            name="destination"
-            value={values.destination}
-            onChange={handleChange}
-            error={fieldErrors.destination}
-          />
-          <TextField
-            label="Start date"
-            name="startDate"
-            type="date"
-            value={values.startDate}
-            onChange={handleChange}
-            error={fieldErrors.startDate}
-          />
-          <TextField
-            label="End date"
-            name="endDate"
-            type="date"
-            value={values.endDate}
-            onChange={handleChange}
-            error={fieldErrors.endDate}
-          />
-          <Button type="submit" disabled={isSaving}>
-            Save changes
-          </Button>
-        </form>
-      )}
-
-      <TripPeople trip={trip} onTripChange={setTrip} onError={showError} />
     </section>
   );
 }
