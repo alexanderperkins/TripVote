@@ -31,14 +31,14 @@ test.describe('create, view, edit and delete trips (#4)', () => {
   test('rejects an end date before the start date', async ({ page }) => {
     await page.getByRole('button', { name: 'New trip' }).click();
     const dialog = page.getByRole('dialog', { name: 'New trip' });
-    await dialog.getByLabel('Destination').fill('Nowhere');
+    await dialog.getByLabel('Destination', { exact: true }).fill('Nowhere');
     await dialog.getByRole('button', { name: 'Next' }).click();
-    await dialog.getByLabel('Start date').fill('2027-06-13');
-    await dialog.getByLabel('End date').fill('2027-06-10');
+    await dialog.getByLabel('Start date', { exact: true }).fill('2027-06-13');
+    await dialog.getByLabel('End date', { exact: true }).fill('2027-06-10');
     await dialog.getByRole('button', { name: 'Next' }).click();
 
     await expect(dialog.getByText("End date can't be before the start date.")).toBeVisible();
-    await expect(dialog.getByLabel('Name')).toBeHidden();
+    await expect(dialog.getByLabel('Name', { exact: true })).toBeHidden();
   });
 
   test('opens the trip detail page with the organizer as a member', async ({ page }) => {
