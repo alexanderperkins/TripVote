@@ -1,5 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { createTrip, LISBON_TRIP, newUser, openTrip, signUp } from './support/helpers.js';
+import {
+  addActivity,
+  createTrip,
+  LISBON_TRIP,
+  newUser,
+  openActivityMenu,
+  openTrip,
+  signUp,
+} from './support/helpers.js';
 
 // Flow 3 in AGENTS.md: every open client sees changes within ~2 s without a reload.
 const LIVE_TIMEOUT = { timeout: 2_000 };
@@ -47,13 +55,14 @@ test.describe('live updates on the itinerary (#10)', () => {
   }
 
   test('a new activity, an edit and a vote show up for the other Member without a reload', async () => {
-    await member.page.getByLabel('Title').fill('Tram 28');
-    await member.page.getByLabel('Date').fill('2027-06-10');
-    await member.page.getByLabel('Time').fill('15:00');
-    await member.page.getByRole('button', { name: 'Add activity' }).click();
+    await addActivity(member.page, { title: 'Tram 28', date: '2027-06-10', time: '15:00' });
     await expect(organizerPage.getByRole('heading', { name: 'Tram 28' })).toBeVisible(LIVE_TIMEOUT);
+    await expect(organizerPage.getByText('Casey added Tram 28')).toBeVisible(LIVE_TIMEOUT);
+    // The author's automatic vote reaches the other Member too.
+    await expect(card(organizerPage, 'Tram 28')).toContainText('Voted by Casey', LIVE_TIMEOUT);
 
-    await card(member.page, 'Tram 28').getByRole('button', { name: 'Edit' }).click();
+    await openActivityMenu(member.page, 'Tram 28');
+    await member.page.getByRole('menuitem', { name: 'Edit' }).click();
     const editForm = member.page
       .locator('form')
       .filter({ has: member.page.getByRole('button', { name: 'Save' }) });
@@ -63,30 +72,46 @@ test.describe('live updates on the itinerary (#10)', () => {
       LIVE_TIMEOUT,
     );
 
-    await card(member.page, 'Tram 28 to Graça')
+    await card(organizerPage, 'Tram 28 to Graça')
       .getByRole('button', { name: 'Vote for Tram 28 to Graça' })
       .click();
-    const organizerCard = card(organizerPage, 'Tram 28 to Graça');
-    await expect(organizerCard).toContainText('1 vote', LIVE_TIMEOUT);
-    await expect(organizerCard).toContainText('Voted by Casey');
+    const memberCard = card(member.page, 'Tram 28 to Graça');
+    await expect(memberCard).toContainText('2 votes', LIVE_TIMEOUT);
+    await expect(memberCard).toContainText('Voted by Casey, Jordan');
+    await expect(member.page.getByText('Jordan voted for Tram 28 to Graça')).toBeVisible();
     await expect(
-      organizerCard.getByRole('button', { name: 'Vote for Tram 28 to Graça' }),
-    ).toHaveAttribute('aria-pressed', 'false');
+      memberCard.getByRole('button', { name: 'Vote for Tram 28 to Graça' }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('a deleted activity disappears for the other Member without a reload', async () => {
-    await organizerPage.getByLabel('Title').fill('Dinner in Alfama');
-    await organizerPage.getByLabel('Date').fill('2027-06-11');
-    await organizerPage.getByLabel('Time').fill('19:30');
-    await organizerPage.getByRole('button', { name: 'Add activity' }).click();
+    await addActivity(organizerPage, {
+      title: 'Dinner in Alfama',
+      date: '2027-06-11',
+      time: '19:30',
+    });
     await expect(member.page.getByRole('heading', { name: 'Dinner in Alfama' })).toBeVisible(
       LIVE_TIMEOUT,
     );
 
-    organizerPage.once('dialog', (dialog) => dialog.accept());
-    await card(organizerPage, 'Dinner in Alfama').getByRole('button', { name: 'Delete' }).click();
-    await expect(member.page.getByRole('heading', { name: 'Dinner in Alfama' })).toBeHidden(
-      LIVE_TIMEOUT,
-    );
+    await openActivityMenu(organizerPage, 'Dinner in Alfama');
+    await organizerPage.getByRole('menuitem', { name: 'Delete' }).click();
+    await expect(organizerPage.getByText('Deleted Dinner in Alfama')).toBeVisible();
+    // The delete is sent once the 5-second Undo window closes, then reaches others live.
+    await expect(member.page.getByRole('heading', { name: 'Dinner in Alfama' })).toBeHidden({
+      timeout: 5_000 + LIVE_TIMEOUT.timeout,
+    });
+  });
+
+  test('Undo keeps a deleted activity for everyone', async () => {
+    await addActivity(organizerPage, { title: 'Fado night', date: '2027-06-12', time: '21:00' });
+    await openActivityMenu(organizerPage, 'Fado night');
+    await organizerPage.getByRole('menuitem', { name: 'Delete' }).click();
+    await organizerPage.getByRole('button', { name: 'Undo' }).click();
+
+    await organizerPage.waitForTimeout(6_000);
+    await member.page.reload();
+    await expect(member.page.getByRole('heading', { name: 'Fado night' })).toBeVisible();
+    await expect(organizerPage.getByRole('heading', { name: 'Fado night' })).toBeVisible();
   });
 });
