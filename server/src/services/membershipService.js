@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { Trip } from '../models/Trip.js';
 import { TripMembership } from '../models/TripMembership.js';
+import { removeAvailabilityForMember } from './availabilityService.js';
 import { AppError } from './errors.js';
 
 const VIEWER_STATUS = { pending: 'pending', active: 'member' };
@@ -89,6 +90,7 @@ export async function approveJoinRequest(tripId, userId) {
 export async function denyJoinRequest(tripId, userId) {
   const membership = await findMembership(tripId, userId, 'pending', 'Join request not found.');
   await membership.deleteOne();
+  await removeAvailabilityForMember(tripId, userId);
 }
 
 // The Organizer can remove any Member; a Member can only remove themselves (leave).

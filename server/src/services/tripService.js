@@ -1,6 +1,7 @@
 import { Trip } from '../models/Trip.js';
 import { TripMembership } from '../models/TripMembership.js';
 import { AppError } from './errors.js';
+import { removeAvailabilityForTrip } from './availabilityService.js';
 import { getViewerStatus, listJoinRequests } from './membershipService.js';
 
 function tripFields(trip) {
@@ -100,4 +101,5 @@ export async function updateTrip(tripId, fields) {
 export async function deleteTrip(tripId) {
   await Trip.deleteOne({ _id: tripId });
   await TripMembership.deleteMany({ trip: tripId });
+  await removeAvailabilityForTrip(tripId);
 }
