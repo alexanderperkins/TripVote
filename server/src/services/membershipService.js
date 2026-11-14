@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { Trip } from '../models/Trip.js';
 import { TripMembership } from '../models/TripMembership.js';
+import { removeAvailabilityForMember } from './availabilityService.js';
 import { AppError } from './errors.js';
 
 const VIEWER_STATUS = { pending: 'pending', active: 'member' };
@@ -103,4 +104,11 @@ export async function removeMember(tripId, userId, callerMembership) {
     throw new AppError(409, 'CONFLICT', 'The Organizer cannot leave or be removed from the trip.');
   }
   await membership.deleteOne();
+  await removeAvailabilityForMember(tripId, userId);
+}
+
+export async function isActiveMember(tripId, userId) {
+  if (!mongoose.isValidObjectId(tripId)) return false;
+  const membership = await TripMembership.exists({ trip: tripId, user: userId, status: 'active' });
+  return Boolean(membership);
 }

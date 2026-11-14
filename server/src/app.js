@@ -37,6 +37,7 @@ export function createApp(overrides = {}) {
   app.use('/api/trips/:tripId/itinerary', requireAuth, createItineraryRouter());
   app.use('/api/trips/:tripId/budget', requireAuth, createBudgetRouter());
   app.use('/api/trips/:tripId/expenses', requireAuth, createExpenseRouter());
+  app.use('/api/trips/:tripId/availability', requireAuth, createAvailabilityRouter());
 
   app.use('/api', notFound);
   app.use(errorHandler);
