@@ -1,9 +1,11 @@
 import dns from 'node:dns';
+import { createServer } from 'node:http';
 import { existsSync } from 'node:fs';
 import { createApp } from './app.js';
 import { loadEnv } from './config/env.js';
 import { connectDb } from './config/db.js';
 import { logger } from './config/logger.js';
+import { attachRealtime } from './realtime/socketServer.js';
 
 // server/.env is optional; copy it from .env.example (see README).
 if (existsSync('.env')) {
@@ -25,6 +27,8 @@ if (env.mongoUri) {
 }
 
 const app = createApp(env);
-app.listen(env.port, () => {
+const httpServer = createServer(app);
+attachRealtime(httpServer, app);
+httpServer.listen(env.port, () => {
   logger.info(`API listening on http://localhost:${env.port}`);
 });
