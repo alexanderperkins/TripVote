@@ -14,9 +14,48 @@
   --color-card: #ffffff;
   --color-border: #e3e6ec;
 
+  /* Soft tints for chips, banners and selected states (see AGENTS.md 2.1). */
+  --color-primary-soft: #e8eefc;
+  --color-warning-soft: #fdf1e6;
+  --color-success-soft: #e5f4ec;
+
+  /* Avatar colors; each passes 4.5:1 with white text. */
+  --color-avatar-0: #2457d6;
+  --color-avatar-1: #b4410c;
+  --color-avatar-2: #1e7a4c;
+  --color-avatar-3: #6d35d6;
+  --color-avatar-4: #0b6b80;
+
   --radius-card: 16px;
 }
 
 body {
   @apply bg-page font-sans text-ink;
+}
+
+/* A card another member just changed briefly glows so the change is easy to spot. */
+@keyframes highlight {
+  from {
+    box-shadow: 0 0 0 4px var(--color-primary-soft);
+    border-color: var(--color-primary);
+  }
+  to {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

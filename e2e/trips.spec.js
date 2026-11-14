@@ -30,14 +30,15 @@ test.describe('create, view, edit and delete trips (#4)', () => {
 
   test('rejects an end date before the start date', async ({ page }) => {
     await page.getByRole('button', { name: 'New trip' }).click();
-    await page.getByLabel('Name').fill('Backwards Trip');
-    await page.getByLabel('Destination').fill('Nowhere');
-    await page.getByLabel('Start date').fill('2027-06-13');
-    await page.getByLabel('End date').fill('2027-06-10');
-    await page.getByRole('button', { name: 'Create trip' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New trip' });
+    await dialog.getByLabel('Destination', { exact: true }).fill('Nowhere');
+    await dialog.getByRole('button', { name: 'Next' }).click();
+    await dialog.getByLabel('Start date', { exact: true }).fill('2027-06-13');
+    await dialog.getByLabel('End date', { exact: true }).fill('2027-06-10');
+    await dialog.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.getByText("End date can't be before the start date.")).toBeVisible();
-    await expect(page.getByRole('link', { name: /Backwards Trip/ })).toBeHidden();
+    await expect(dialog.getByText("End date can't be before the start date.")).toBeVisible();
+    await expect(dialog.getByLabel('Name', { exact: true })).toBeHidden();
   });
 
   test('opens the trip detail page with the organizer as a member', async ({ page }) => {
@@ -46,7 +47,7 @@ test.describe('create, view, edit and delete trips (#4)', () => {
 
     await expect(page).toHaveURL(/\/trips\/[a-f0-9]{24}$/);
     await expect(page.getByText('Lisbon, Portugal')).toBeVisible();
-    await expect(page.getByText('2027-06-10 – 2027-06-13')).toBeVisible();
+    await expect(page.getByText('Jun 10 – Jun 13, 2027')).toBeVisible();
     const members = page.getByRole('list');
     await expect(members.getByRole('listitem')).toHaveCount(1);
     await expect(members).toContainText('Riley');
@@ -65,7 +66,7 @@ test.describe('create, view, edit and delete trips (#4)', () => {
 
     await expect(page.getByRole('heading', { level: 1, name: 'Porto Weekend' })).toBeVisible();
     await expect(page.getByText('Porto, Portugal')).toBeVisible();
-    await expect(page.getByText('2027-06-10 – 2027-06-14')).toBeVisible();
+    await expect(page.getByText('Jun 10 – Jun 14, 2027')).toBeVisible();
 
     await page.goto('/trips');
     await expect(page.getByRole('link', { name: /Porto Weekend/ })).toBeVisible();

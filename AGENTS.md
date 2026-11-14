@@ -149,6 +149,13 @@ We follow **red → green → refactor** and the git history must show it:
 - Colors (define once as Tailwind theme tokens, never hard-code elsewhere):
   ink `#14213D`, muted `#5A6478`, primary `#2457D6`, warning `#E07A1F` (text `#A84D0C`), success `#1E7A4C`,
   danger `#B42318`, page `#F6F7F9`, card `#FFFFFF` with `#E3E6EC` border and 16px radius.
+- Soft tints for chips, banners and selected states: primary-soft `#E8EEFC`, warning-soft `#FDF1E6`,
+  success-soft `#E5F4EC`. Avatar colors (white initials, AA contrast): `#2457D6`, `#B4410C`, `#1E7A4C`,
+  `#6D35D6`, `#0B6B80`, picked per person by a stable hash of their id.
+- Trip pages share `TripHeader`: a navy-to-blue cover with a dotted route, name, destination, date range,
+  countdown, member avatars, role and live status, then Overview / Itinerary tabs.
+- Secondary actions on a card (Edit, Delete) live in a `MoreMenu` ("⋯"). Deleting an activity hides it at once
+  and shows an Undo toast for 5 seconds before calling the API. Create and edit flows open in a `Modal`.
 - Primary actions are solid blue buttons; secondary actions are white with a gray border; destructive actions use
   danger red text.
 - Layout: top app bar, then trip header + tabs (Overview, Itinerary, Availability, Budget) on trip pages; content max
@@ -253,6 +260,7 @@ Component expectations:
 <!--
   Changelog — update when the rules change after the before/after test (HW3 Task 4).
   - v1 (2026-10-30): first version, used for the before/after test.
+  - v3 (2026-11-13): UI refresh (TripHeader, avatars, soft tints, MoreMenu, Undo toasts, Modal flows).
   - v2 (2026-10-30): after the before/after test. Logout must invalidate the token on the server
     (the test run only cleared the cookie), and every user-facing flow needs a passing Playwright spec
     (the test run wrote none).
