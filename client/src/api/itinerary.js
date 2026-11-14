@@ -29,3 +29,15 @@ export function deleteActivity(tripId, activityId) {
     },
   );
 }
+
+function votesPath(tripId, activityId) {
+  return `/api/trips/${encodeURIComponent(tripId)}/itinerary/${encodeURIComponent(activityId)}/votes`;
+}
+
+export function addVote(tripId, activityId) {
+  return apiRequest(votesPath(tripId, activityId), { method: 'POST' });
+}
+
+export function removeVote(tripId, activityId) {
+  return apiRequest(votesPath(tripId, activityId), { method: 'DELETE' });
+}
