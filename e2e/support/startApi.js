@@ -1,10 +1,12 @@
 // Starts the real Express app on a throwaway in-memory MongoDB for Playwright.
 // Started by playwright.config.js; never uses server/.env or Atlas.
 import { randomBytes } from 'node:crypto';
+import { createServer } from 'node:http';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { createApp } from '../../server/src/app.js';
 import { connectDb, disconnectDb } from '../../server/src/config/db.js';
 import { logger } from '../../server/src/config/logger.js';
+import { attachRealtime } from '../../server/src/realtime/socketServer.js';
 
 const port = Number(process.env.E2E_API_PORT ?? 4100);
 
@@ -19,7 +21,9 @@ const app = createApp({
   authRateLimit: 10_000,
 });
 
-const server = app.listen(port, () => {
+const server = createServer(app);
+attachRealtime(server, app);
+server.listen(port, () => {
   logger.info(`E2E API listening on http://localhost:${port}`);
 });
 
