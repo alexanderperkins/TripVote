@@ -216,6 +216,22 @@ describe('live updates over Socket.IO', () => {
     expect(await unvoted).toEqual({ id: activity.id, votes: { count: 0, voters: [] } });
   });
 
+  it('sends updated availability to other Members when someone marks free dates', async () => {
+    const { organizer, member, tripId } = await setUpTrip();
+    const { socket } = await joinTrip(organizer, tripId);
+
+    const received = waitFor(socket, 'availability:updated');
+    await request(app)
+      .put(`/api/trips/${tripId}/availability/me`)
+      .set('Cookie', member.cookie)
+      .send({ dates: ['2026-12-02'] });
+
+    expect(await received).toMatchObject({
+      responses: [{ userId: member.id, name: 'Sam Rivera', dates: ['2026-12-02'] }],
+      bestDates: ['2026-12-02'],
+    });
+  });
+
   it('does not send one trip’s changes to Members of another trip', async () => {
     const { member, tripId } = await setUpTrip();
     const other = await setUpTrip();
