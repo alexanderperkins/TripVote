@@ -90,7 +90,6 @@ export async function approveJoinRequest(tripId, userId) {
 export async function denyJoinRequest(tripId, userId) {
   const membership = await findMembership(tripId, userId, 'pending', 'Join request not found.');
   await membership.deleteOne();
-  await removeAvailabilityForMember(tripId, userId);
 }
 
 // The Organizer can remove any Member; a Member can only remove themselves (leave).
@@ -105,6 +104,7 @@ export async function removeMember(tripId, userId, callerMembership) {
     throw new AppError(409, 'CONFLICT', 'The Organizer cannot leave or be removed from the trip.');
   }
   await membership.deleteOne();
+  await removeAvailabilityForMember(tripId, userId);
 }
 
 export async function isActiveMember(tripId, userId) {
