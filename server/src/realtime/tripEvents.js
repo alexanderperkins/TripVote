@@ -5,6 +5,7 @@ export const ACTIVITY_CREATED = 'activity:created';
 export const ACTIVITY_UPDATED = 'activity:updated';
 export const ACTIVITY_DELETED = 'activity:deleted';
 export const ACTIVITY_VOTES = 'activity:votes';
+export const AVAILABILITY_UPDATED = 'availability:updated';
 
 function realtime(req) {
   return req.app.locals.realtime;
@@ -36,6 +37,11 @@ export function notifyVotesChanged(req, activity) {
     id: activity.id,
     votes: sharedVotes(activity.votes),
   });
+}
+
+// The summary has nothing viewer-specific, so every Member gets the same payload.
+export function notifyAvailabilityChanged(req, summary) {
+  realtime(req)?.emitToTrip(req.params.tripId, AVAILABILITY_UPDATED, summary);
 }
 
 export async function notifyMemberRemoved(req, userId) {
