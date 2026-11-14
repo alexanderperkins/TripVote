@@ -72,6 +72,7 @@ export default function TripHeader({ trip, status, today = todayIso() }) {
           )}
         </TabLink>
         <TabLink to={`/trips/${trip.id}/itinerary`}>Itinerary</TabLink>
+        <TabLink to={`/trips/${trip.id}/availability`}>Availability</TabLink>
       </nav>
     </header>
   );

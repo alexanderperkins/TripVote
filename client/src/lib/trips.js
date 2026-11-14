@@ -48,6 +48,10 @@ export function formatDateRange(startDate, endDate) {
   return `${sameYear ? start : formatShortDate(startDate)} – ${formatShortDate(endDate)}`;
 }
 
+export function formatMonthDay(isoDate) {
+  return format(isoDate, { month: 'short', day: 'numeric' });
+}
+
 export function formatDayLabel(isoDate) {
   return format(isoDate, { weekday: 'short', month: 'short', day: 'numeric' });
 }
