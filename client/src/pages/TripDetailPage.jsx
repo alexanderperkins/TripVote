@@ -160,12 +160,18 @@ export default function TripDetailPage() {
           <p className="mt-2 text-sm text-muted">
             {trip.startDate} – {trip.endDate}
           </p>
-          <div className="mt-3">
+          <div className="mt-3 flex gap-4">
             <Link
               to={`/trips/${tripId}/itinerary`}
               className="text-sm font-semibold text-primary hover:underline"
             >
               Itinerary
+            </Link>
+            <Link
+              to={`/trips/${tripId}/budget`}
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              Budget
             </Link>
           </div>
         </div>
