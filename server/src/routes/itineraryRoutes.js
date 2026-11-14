@@ -4,6 +4,8 @@ import {
   listActivities,
   updateActivity,
   deleteActivity,
+  addVote,
+  removeVote,
 } from '../controllers/itineraryController.js';
 import { requireTripRole } from '../middleware/requireTripRole.js';
 import { validateBody } from '../middleware/validate.js';
@@ -18,6 +20,8 @@ export function createItineraryRouter() {
   router.get('/', listActivities);
   router.patch('/:activityId', validateBody(updateActivitySchema), updateActivity);
   router.delete('/:activityId', deleteActivity);
+  router.post('/:activityId/votes', addVote);
+  router.delete('/:activityId/votes', removeVote);
 
   return router;
 }

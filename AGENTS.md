@@ -45,7 +45,7 @@ latest stable release, then add it to this table in the same PR.
 | Database | MongoDB Atlas via Mongoose | mongoose 9.11.4 |
 | Validation | zod (shared schemas for request bodies) | zod 4.6.7 |
 | Auth | JWT in an httpOnly, Secure, SameSite cookie; bcrypt for passwords | jsonwebtoken 9.0.3, bcrypt 6.0.0 |
-| Live updates | TBD: Socket.IO (preferred) or Pusher | socket.io 4.8.4 if chosen |
+| Live updates | Socket.IO | socket.io 4.8.4 (server), socket.io-client 4.8.4 (client and server tests) |
 | Unit tests | Vitest + React Testing Library | vitest 5.0.5, @testing-library/react 16.3.3, @testing-library/jest-dom 7.0.1, @testing-library/user-event 14.6.8, jsdom 30.1.3 |
 | Lint / format | ESLint (flat config) + Prettier | eslint 10.13.0, @eslint/js 10.0.1, globals 17.13.0, eslint-plugin-react-hooks 7.1.1, eslint-plugin-react-refresh 0.5.7, prettier 3.9.10 |
 | API tests | Supertest + mongodb-memory-server | supertest 7.3.1, mongodb-memory-server 11.3.0 |
