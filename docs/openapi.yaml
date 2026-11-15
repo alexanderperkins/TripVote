@@ -1,0 +1,1621 @@
+openapi: 3.0.3
+info:
+  title: TripVote API
+  version: 1.0.0
+  description: >-
+    REST API for TripVote, a collaborative group travel planning application.
+    Enables groups to agree on dates, propose and vote on activities, maintain a
+    shared itinerary with live updates, and track spending against a shared budget.
+servers:
+  - url: /
+    description: Default server
+tags:
+  - name: Health
+    description: System health check
+  - name: Auth
+    description: User authentication and session management
+  - name: Trips
+    description: Trip creation, management, and membership
+  - name: Join
+    description: Invite links and join request flows
+  - name: Itinerary
+    description: Activities and voting on the shared itinerary
+  - name: Availability
+    description: Member date availability and group overlap
+  - name: Budget
+    description: Shared trip budget, expenses, and balance calculations
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      description: Returns service health status.
+      tags:
+        - Health
+      security: []
+      responses:
+        '200':
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      description: Creates a new user account and sets an httpOnly session cookie.
+      tags:
+        - Auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: token=jwt.token.here; Path=/; HttpOnly; SameSite=Lax
+              description: Session JWT cookie named `token`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Email address already registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: EMAIL_TAKEN
+                  message: An account with this email already exists.
+                  fields:
+                    email: An account with this email already exists.
+
+  /api/auth/login:
+    post:
+      summary: Log in
+      description: Authenticates user credentials and sets an httpOnly session cookie.
+      tags:
+        - Auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: token=jwt.token.here; Path=/; HttpOnly; SameSite=Lax
+              description: Session JWT cookie named `token`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Invalid email or password.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: Email or password is incorrect.
+
+  /api/auth/logout:
+    post:
+      summary: Log out
+      description: Clears the session cookie to log out the user.
+      tags:
+        - Auth
+      security: []
+      responses:
+        '204':
+          description: Successfully logged out.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT
+
+  /api/auth/me:
+    get:
+      summary: Get current user
+      description: Returns the authenticated user's profile.
+      tags:
+        - Auth
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Authenticated user details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/trips:
+    get:
+      summary: List user trips
+      description: Retrieves all active trips the authenticated user belongs to.
+      tags:
+        - Trips
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: List of user trips.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TripSummary'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      summary: Create a trip
+      description: Creates a new trip. The creator automatically becomes the Organizer.
+      tags:
+        - Trips
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TripInput'
+      responses:
+        '201':
+          description: Trip successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripCreated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/trips/{tripId}:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+    get:
+      summary: Get trip details
+      description: Returns trip details and members. If caller is the Organizer, pending join requests are included.
+      tags:
+        - Trips
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Detailed trip information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    patch:
+      summary: Update trip
+      description: Updates trip name, destination, and dates. Restricted to the Organizer.
+      tags:
+        - Trips
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TripInput'
+      responses:
+        '200':
+          description: Trip updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripCreated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      summary: Delete trip
+      description: Permanently deletes the trip, memberships, and related data. Restricted to the Organizer.
+      tags:
+        - Trips
+      security:
+        - cookieAuth: []
+      responses:
+        '204':
+          description: Trip deleted successfully.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/trips/{tripId}/join-requests/{userId}/approve:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+      - $ref: '#/components/parameters/userId'
+    post:
+      summary: Approve join request
+      description: Approves a pending request to join the trip, promoting the user to Member. Restricted to Organizer.
+      tags:
+        - Trips
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Join request approved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripMember'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/trips/{tripId}/join-requests/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+      - $ref: '#/components/parameters/userId'
+    delete:
+      summary: Deny join request
+      description: Denies and removes a pending join request. Restricted to Organizer.
+      tags:
+        - Trips
+      security:
+        - cookieAuth: []
+      responses:
+        '204':
+          description: Join request denied.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/trips/{tripId}/members/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+      - $ref: '#/components/parameters/userId'
+    delete:
+      summary: Remove member or leave trip
+      description: Removes a member from the trip. Organizers can remove any member; members can only remove themselves (leave). The Organizer cannot leave or be removed.
+      tags:
+        - Trips
+      security:
+        - cookieAuth: []
+      responses:
+        '204':
+          description: Member removed or left successfully.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Organizer cannot leave or be removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: CONFLICT
+                  message: The Organizer cannot leave or be removed from the trip.
+
+  /api/join/{shareCode}:
+    parameters:
+      - $ref: '#/components/parameters/shareCode'
+    get:
+      summary: Preview trip by share code
+      description: Returns public viewer information for an invite link. Only active members receive the internal tripId.
+      tags:
+        - Join
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Trip invite preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ViewerTrip'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Invalid invite link.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: NOT_FOUND
+                  message: This invite link is invalid.
+
+  /api/join/{shareCode}/requests:
+    parameters:
+      - $ref: '#/components/parameters/shareCode'
+    post:
+      summary: Request to join a trip
+      description: Submits a pending request to join the trip referenced by the share code.
+      tags:
+        - Join
+      security:
+        - cookieAuth: []
+      responses:
+        '201':
+          description: Join request submitted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JoinRequestStatus'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Invalid invite link.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: NOT_FOUND
+                  message: This invite link is invalid.
+        '409':
+          description: Request already exists or user is already a member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: CONFLICT
+                  message: You have already asked to join this trip.
+
+  /api/trips/{tripId}/itinerary:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+    get:
+      summary: List itinerary activities
+      description: Retrieves all activities for the trip, sorted by date and time, including vote counts and voter status.
+      tags:
+        - Itinerary
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: List of itinerary activities.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ItineraryItem'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    post:
+      summary: Add activity to itinerary
+      description: Adds a new planned activity to the trip itinerary.
+      tags:
+        - Itinerary
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityInput'
+      responses:
+        '201':
+          description: Activity created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItineraryItem'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/trips/{tripId}/itinerary/{activityId}:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+      - $ref: '#/components/parameters/activityId'
+    patch:
+      summary: Update an activity
+      description: Updates activity details. Permitted only for the creator of the activity or the Organizer.
+      tags:
+        - Itinerary
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityUpdateInput'
+      responses:
+        '200':
+          description: Activity updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItineraryItem'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      summary: Delete an activity
+      description: Deletes an activity and its associated votes. Permitted only for the creator or the Organizer.
+      tags:
+        - Itinerary
+      security:
+        - cookieAuth: []
+      responses:
+        '204':
+          description: Activity deleted.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/trips/{tripId}/itinerary/{activityId}/votes:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+      - $ref: '#/components/parameters/activityId'
+    post:
+      summary: Vote for an activity
+      description: Records the authenticated member's vote for the activity (one vote per member).
+      tags:
+        - Itinerary
+      security:
+        - cookieAuth: []
+      responses:
+        '201':
+          description: Vote recorded. Returns updated activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItineraryItem'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Member has already voted for this activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: CONFLICT
+                  message: You have already voted for this activity.
+    delete:
+      summary: Remove vote for an activity
+      description: Removes the authenticated member's vote from the activity.
+      tags:
+        - Itinerary
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Vote removed. Returns updated activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItineraryItem'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Activity not found or user has not voted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: NOT_FOUND
+                  message: You have not voted for this activity.
+
+  /api/trips/{tripId}/availability:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+    get:
+      summary: Get trip availability summary
+      description: Returns availability matrix across all dates in the trip range, best dates with highest overlap, and members who have not yet responded.
+      tags:
+        - Availability
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Availability summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilitySummary'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/trips/{tripId}/availability/me:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+    put:
+      summary: Update caller availability
+      description: Sets or replaces the authenticated member's free dates for the trip. All dates must fall within the trip's start and end dates.
+      tags:
+        - Availability
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityInput'
+      responses:
+        '200':
+          description: Availability updated. Returns updated trip availability summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilitySummary'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/trips/{tripId}/budget:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+    get:
+      summary: Get budget and expenses summary
+      description: Returns total budget, spent amount, remaining funds, per-category breakdown, individual balances, and expenses list.
+      tags:
+        - Budget
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Budget and expenses summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetSummary'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      summary: Set trip budget
+      description: Sets or updates the total trip budget and optional per-category allocations. Amounts are in integer cents. Restricted to Organizer.
+      tags:
+        - Budget
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetInput'
+      responses:
+        '200':
+          description: Budget successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetRecord'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/trips/{tripId}/expenses:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+    post:
+      summary: Log an expense
+      description: Records an expense with equal splitting among chosen members. Amounts are in integer cents.
+      tags:
+        - Budget
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseInput'
+      responses:
+        '201':
+          description: Expense successfully logged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/trips/{tripId}/expenses/{expenseId}:
+    parameters:
+      - $ref: '#/components/parameters/tripId'
+      - $ref: '#/components/parameters/expenseId'
+    delete:
+      summary: Delete an expense
+      description: Deletes a logged expense. Permitted only for the member who logged the expense or the Organizer.
+      tags:
+        - Budget
+      security:
+        - cookieAuth: []
+      responses:
+        '204':
+          description: Expense deleted successfully.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token
+      description: Session JWT stored in an httpOnly cookie named `token`.
+
+  parameters:
+    tripId:
+      name: tripId
+      in: path
+      required: true
+      description: Unique 24-character hex MongoDB ObjectId of the trip.
+      schema:
+        type: string
+        example: 64b8f0a2c1b2c8b1f8e4e1a2
+    activityId:
+      name: activityId
+      in: path
+      required: true
+      description: Unique 24-character hex MongoDB ObjectId of the itinerary activity.
+      schema:
+        type: string
+        example: 64b8f0a2c1b2c8b1f8e4e1a4
+    expenseId:
+      name: expenseId
+      in: path
+      required: true
+      description: Unique 24-character hex MongoDB ObjectId of the logged expense.
+      schema:
+        type: string
+        example: 64b8f0a2c1b2c8b1f8e4e1a5
+    userId:
+      name: userId
+      in: path
+      required: true
+      description: Unique 24-character hex MongoDB ObjectId of the user.
+      schema:
+        type: string
+        example: 64b8f0a2c1b2c8b1f8e4e1a3
+    shareCode:
+      name: shareCode
+      in: path
+      required: true
+      description: Random unguessable trip invite share code.
+      schema:
+        type: string
+        example: 7f3b89a1c2e4
+
+  responses:
+    ValidationError:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Please fix the highlighted fields.
+              fields:
+                endDate: End date can't be before the start date.
+    UnauthorizedError:
+      description: Authentication required or invalid session.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: UNAUTHENTICATED
+              message: Please log in to continue.
+    ForbiddenError:
+      description: Caller lacks required permissions or is not an active trip member.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: FORBIDDEN
+              message: You do not have permission to access this trip.
+    NotFoundError:
+      description: Target resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: NOT_FOUND
+              message: Trip not found.
+    ConflictError:
+      description: Request conflicts with current state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: CONFLICT
+              message: You have already asked to join this trip.
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code.
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              description: Human-readable error message.
+              example: Please fix the highlighted fields.
+            fields:
+              type: object
+              additionalProperties:
+                type: string
+              description: Field-specific error messages.
+              example:
+                email: Enter a valid email address.
+
+    User:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          description: Unique user identifier.
+          example: 64b8f0a2c1b2c8b1f8e4e1a1
+        name:
+          type: string
+          description: User's display name.
+          example: Alice Smith
+
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+          description: User full name.
+          example: Alice Smith
+        email:
+          type: string
+          format: email
+          description: Valid unique email address.
+          example: alice@example.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          description: Account password (8-72 characters).
+          example: hunter2hunter2
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address.
+          example: alice@example.com
+        password:
+          type: string
+          minLength: 1
+          description: User's password.
+          example: hunter2hunter2
+
+    TripInput:
+      type: object
+      required:
+        - name
+        - destination
+        - startDate
+        - endDate
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Name of the trip.
+          example: Yosemite Roadtrip
+        destination:
+          type: string
+          minLength: 1
+          description: Destination location.
+          example: Yosemite National Park
+        startDate:
+          type: string
+          format: date
+          description: Trip start date in YYYY-MM-DD format.
+          example: '2026-07-01'
+        endDate:
+          type: string
+          format: date
+          description: Trip end date in YYYY-MM-DD format (must be on or after startDate).
+          example: '2026-07-08'
+
+    TripCreated:
+      type: object
+      required:
+        - id
+        - name
+        - destination
+        - startDate
+        - endDate
+        - role
+      properties:
+        id:
+          type: string
+          description: Unique trip identifier.
+          example: 64b8f0a2c1b2c8b1f8e4e1a2
+        name:
+          type: string
+          example: Yosemite Roadtrip
+        destination:
+          type: string
+          example: Yosemite National Park
+        startDate:
+          type: string
+          format: date
+          example: '2026-07-01'
+        endDate:
+          type: string
+          format: date
+          example: '2026-07-08'
+        role:
+          type: string
+          enum: [organizer]
+          example: organizer
+
+    TripSummary:
+      type: object
+      required:
+        - id
+        - name
+        - destination
+        - startDate
+        - endDate
+        - role
+        - memberCount
+      properties:
+        id:
+          type: string
+          example: 64b8f0a2c1b2c8b1f8e4e1a2
+        name:
+          type: string
+          example: Yosemite Roadtrip
+        destination:
+          type: string
+          example: Yosemite National Park
+        startDate:
+          type: string
+          format: date
+          example: '2026-07-01'
+        endDate:
+          type: string
+          format: date
+          example: '2026-07-08'
+        role:
+          type: string
+          enum: [organizer, member]
+          example: organizer
+        memberCount:
+          type: integer
+          description: Total count of active members in the trip.
+          example: 4
+
+    TripDetail:
+      type: object
+      required:
+        - id
+        - name
+        - destination
+        - startDate
+        - endDate
+        - shareCode
+        - role
+        - members
+      properties:
+        id:
+          type: string
+          example: 64b8f0a2c1b2c8b1f8e4e1a2
+        name:
+          type: string
+          example: Yosemite Roadtrip
+        destination:
+          type: string
+          example: Yosemite National Park
+        startDate:
+          type: string
+          format: date
+          example: '2026-07-01'
+        endDate:
+          type: string
+          format: date
+          example: '2026-07-08'
+        shareCode:
+          type: string
+          description: Shareable invite code.
+          example: 7f3b89a1c2e4
+        role:
+          type: string
+          enum: [organizer, member]
+          example: organizer
+        members:
+          type: array
+          description: List of active trip members.
+          items:
+            $ref: '#/components/schemas/TripMember'
+        joinRequests:
+          type: array
+          description: Pending join requests (present only for Organizers).
+          items:
+            $ref: '#/components/schemas/JoinRequest'
+
+    TripMember:
+      type: object
+      required:
+        - userId
+        - name
+        - role
+      properties:
+        userId:
+          type: string
+          example: 64b8f0a2c1b2c8b1f8e4e1a1
+        name:
+          type: string
+          example: Alice Smith
+        role:
+          type: string
+          enum: [organizer, member]
+          example: organizer
+
+    JoinRequest:
+      type: object
+      required:
+        - userId
+        - name
+        - requestedAt
+      properties:
+        userId:
+          type: string
+          example: 64b8f0a2c1b2c8b1f8e4e1a3
+        name:
+          type: string
+          example: Bob Jones
+        requestedAt:
+          type: string
+          format: date-time
+          example: '2026-07-01T14:20:00.000Z'
+
+    MemberReference:
+      type: object
+      required:
+        - userId
+        - name
+      properties:
+        userId:
+          type: string
+          example: 64b8f0a2c1b2c8b1f8e4e1a1
+        name:
+          type: string
+          example: Alice Smith
+
+    ViewerTrip:
+      type: object
+      required:
+        - name
+        - organizerName
+        - startDate
+        - endDate
+        - members
+        - viewerStatus
+      properties:
+        name:
+          type: string
+          example: Yosemite Roadtrip
+        organizerName:
+          type: string
+          example: Alice Smith
+        startDate:
+          type: string
+          format: date
+          example: '2026-07-01'
+        endDate:
+          type: string
+          format: date
+          example: '2026-07-08'
+        members:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - role
+            properties:
+              name:
+                type: string
+                example: Alice Smith
+              role:
+                type: string
+                enum: [organizer, member]
+                example: organizer
+        viewerStatus:
+          type: string
+          enum: [none, pending, member]
+          description: Caller's status relative to this trip.
+          example: none
+        tripId:
+          type: string
+          description: Trip ID, returned only if viewerStatus is member.
+          example: 64b8f0a2c1b2c8b1f8e4e1a2
+
+    JoinRequestStatus:
+      type: object
+      required:
+        - viewerStatus
+      properties:
+        viewerStatus:
+          type: string
+          enum: [pending]
+          example: pending
+
+    ActivityInput:
+      type: object
+      required:
+        - title
+        - date
+        - time
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: Hike Mist Trail
+        date:
+          type: string
+          format: date
+          example: '2026-07-02'
+        time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          description: Time in HH:mm format.
+          example: '09:00'
+        location:
+          type: string
+          example: Happy Isles
+        notes:
+          type: string
+          example: Bring waterproof jacket and water.
+
+    ActivityUpdateInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: Hike Mist Trail
+        date:
+          type: string
+          format: date
+          example: '2026-07-02'
+        time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: '09:30'
+        location:
+          type: string
+          example: Happy Isles Shuttle Stop
+        notes:
+          type: string
+          example: Pack extra snacks!
+
+    VoteSummary:
+      type: object
+      required:
+        - count
+        - voters
+        - hasVoted
+      properties:
+        count:
+          type: integer
+          description: Total number of votes.
+          example: 3
+        voters:
+          type: array
+          description: List of members who voted for this activity.
+          items:
+            $ref: '#/components/schemas/MemberReference'
+        hasVoted:
+          type: boolean
+          description: Whether the authenticated caller has voted for this activity.
+          example: true
+
+    ItineraryItem:
+      type: object
+      required:
+        - id
+        - title
+        - date
+        - time
+        - addedBy
+        - votes
+      properties:
+        id:
+          type: string
+          example: 64b8f0a2c1b2c8b1f8e4e1a4
+        title:
+          type: string
+          example: Hike Mist Trail
+        date:
+          type: string
+          format: date
+          example: '2026-07-02'
+        time:
+          type: string
+          example: '09:00'
+        location:
+          type: string
+          example: Happy Isles
+        notes:
+          type: string
+          example: Bring waterproof jacket and water.
+        addedBy:
+          $ref: '#/components/schemas/MemberReference'
+        votes:
+          $ref: '#/components/schemas/VoteSummary'
+
+    AvailabilityInput:
+      type: object
+      required:
+        - dates
+      properties:
+        dates:
+          type: array
+          maxItems: 366
+          items:
+            type: string
+            format: date
+          description: List of dates the member is available in YYYY-MM-DD format.
+          example:
+            - '2026-07-02'
+            - '2026-07-03'
+            - '2026-07-04'
+
+    AvailabilityDay:
+      type: object
+      required:
+        - date
+        - count
+        - members
+      properties:
+        date:
+          type: string
+          format: date
+          example: '2026-07-02'
+        count:
+          type: integer
+          description: Number of members available on this day.
+          example: 3
+        members:
+          type: array
+          description: Members available on this day.
+          items:
+            $ref: '#/components/schemas/MemberReference'
+
+    MemberAvailability:
+      type: object
+      required:
+        - userId
+        - name
+        - dates
+      properties:
+        userId:
+          type: string
+          example: 64b8f0a2c1b2c8b1f8e4e1a1
+        name:
+          type: string
+          example: Alice Smith
+        dates:
+          type: array
+          items:
+            type: string
+            format: date
+          example:
+            - '2026-07-02'
+            - '2026-07-03'
+
+    AvailabilitySummary:
+      type: object
+      required:
+        - days
+        - bestDates
+        - responses
+        - notResponded
+        - memberCount
+      properties:
+        days:
+          type: array
+          description: Each day of the trip with available member count and members.
+          items:
+            $ref: '#/components/schemas/AvailabilityDay'
+        bestDates:
+          type: array
+          description: Dates with maximum member availability.
+          items:
+            type: string
+            format: date
+          example:
+            - '2026-07-02'
+            - '2026-07-03'
+        responses:
+          type: array
+          description: Responses submitted by members.
+          items:
+            $ref: '#/components/schemas/MemberAvailability'
+        notResponded:
+          type: array
+          description: Active members who have not yet submitted availability.
+          items:
+            $ref: '#/components/schemas/MemberReference'
+        memberCount:
+          type: integer
+          description: Total number of active members.
+          example: 4
+
+    CategoryBudgets:
+      type: object
+      properties:
+        lodging:
+          type: integer
+          minimum: 0
+          description: Lodging budget in integer cents.
+          example: 60000
+        food:
+          type: integer
+          minimum: 0
+          description: Food budget in integer cents.
+          example: 40000
+        transport:
+          type: integer
+          minimum: 0
+          description: Transport budget in integer cents.
+          example: 20000
+        activities:
+          type: integer
+          minimum: 0
+          description: Activities budget in integer cents.
+          example: 20000
+        other:
+          type: integer
+          minimum: 0
+          description: Other budget in integer cents.
+          example: 10000
+
+    BudgetInput:
+      type: object
+      required:
+        - totalCents
+      properties:
+        totalCents:
+          type: integer
+          minimum: 0
+          description: Total budget for the trip in integer cents.
+          example: 150000
+        categories:
+          $ref: '#/components/schemas/CategoryBudgets'
+
+    BudgetRecord:
+      type: object
+      required:
+        - totalCents
+        - categories
+      properties:
+        totalCents:
+          type: integer
+          description: Total budget in integer cents.
+          example: 150000
+        categories:
+          type: object
+          required:
+            - lodging
+            - food
+            - transport
+            - activities
+            - other
+          properties:
+            lodging:
+              type: integer
+              example: 60000
+            food:
+              type: integer
+              example: 40000
+            transport:
+              type: integer
+              example: 20000
+            activities:
+              type: integer
+              example: 20000
+            other:
+              type: integer
+              example: 10000
+
+    CategoryBreakdown:
+      type: object
+      required:
+        - category
+        - plannedCents
+        - spentCents
+        - overBudgetCents
+      properties:
+        category:
+          type: string
+          enum: [lodging, food, transport, activities, other]
+          example: lodging
+        plannedCents:
+          type: integer
+          description: Budgeted amount for this category in integer cents.
+          example: 60000
+        spentCents:
+          type: integer
+          description: Total spent in this category in integer cents.
+          example: 65000
+        overBudgetCents:
+          type: integer
+          description: Amount by which spending exceeds planned budget in integer cents (0 if within budget).
+          example: 5000
+
+    MemberBalance:
+      type: object
+      required:
+        - userId
+        - name
+        - balanceCents
+      properties:
+        userId:
+          type: string
+          example: 64b8f0a2c1b2c8b1f8e4e1a1
+        name:
+          type: string
+          example: Alice Smith
+        balanceCents:
+          type: integer
+          description: Net balance in integer cents. Positive means member is owed money; negative means member owes money. The sum of all member balances equals 0.
+          example: 2500
+
+    Expense:
+      type: object
+      required:
+        - id
+        - description
+        - amountCents
+        - category
+        - paidBy
+        - splitAmong
+        - createdAt
+      properties:
+        id:
+          type: string
+          example: 64b8f0a2c1b2c8b1f8e4e1a5
+        description:
+          type: string
+          example: Campsite reservation
+        amountCents:
+          type: integer
+          description: Expense amount in integer cents.
+          example: 12000
+        category:
+          type: string
+          enum: [lodging, food, transport, activities, other]
+          example: lodging
+        paidBy:
+          $ref: '#/components/schemas/MemberReference'
+        splitAmong:
+          type: array
+          description: Members sharing this expense.
+          items:
+            $ref: '#/components/schemas/MemberReference'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-07-01T16:00:00.000Z'
+
+    ExpenseInput:
+      type: object
+      required:
+        - description
+        - amountCents
+        - category
+        - splitAmong
+      properties:
+        description:
+          type: string
+          minLength: 1
+          example: Campsite reservation
+        amountCents:
+          type: integer
+          minimum: 1
+          description: Positive expense amount in integer cents.
+          example: 12000
+        category:
+          type: string
+          enum: [lodging, food, transport, activities, other]
+          example: lodging
+        paidBy:
+          type: string
+          description: User ID of active trip member who paid (defaults to authenticated caller if omitted).
+          example: 64b8f0a2c1b2c8b1f8e4e1a1
+        splitAmong:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          description: Non-empty array of active trip member user IDs to split the expense among.
+          example:
+            - 64b8f0a2c1b2c8b1f8e4e1a1
+            - 64b8f0a2c1b2c8b1f8e4e1a2
+            - 64b8f0a2c1b2c8b1f8e4e1a3
+
+    BudgetSummary:
+      type: object
+      required:
+        - totalCents
+        - spentCents
+        - remainingCents
+        - byCategory
+        - balances
+        - expenses
+      properties:
+        totalCents:
+          type: integer
+          description: Total budgeted amount in integer cents.
+          example: 150000
+        spentCents:
+          type: integer
+          description: Total expenses recorded in integer cents.
+          example: 85000
+        remainingCents:
+          type: integer
+          description: Remaining budget in integer cents (totalCents minus spentCents; negative if over budget).
+          example: 65000
+        byCategory:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryBreakdown'
+        balances:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberBalance'
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expense'
