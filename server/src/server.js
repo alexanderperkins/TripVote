@@ -26,7 +26,10 @@ if (env.mongoUri) {
   );
 }
 
-const app = createApp(env);
+const clientDistPath =
+  env.nodeEnv === 'production' && existsSync('../client/dist') ? '../client/dist' : undefined;
+
+const app = createApp({ ...env, ...(clientDistPath && { clientDistPath }) });
 const httpServer = createServer(app);
 attachRealtime(httpServer, app);
 httpServer.listen(env.port, () => {

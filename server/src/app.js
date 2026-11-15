@@ -1,3 +1,4 @@
+import path from 'node:path';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -22,6 +23,7 @@ const DEFAULT_CONFIG = {
 export function createApp(overrides = {}) {
   const config = { ...DEFAULT_CONFIG, ...overrides };
   const app = express();
+  app.set('trust proxy', 1);
   app.locals.config = config;
 
   app.use(helmet());
@@ -39,6 +41,21 @@ export function createApp(overrides = {}) {
   app.use('/api/trips/:tripId/budget', requireAuth, createBudgetRouter());
   app.use('/api/trips/:tripId/expenses', requireAuth, createExpenseRouter());
   app.use('/api/trips/:tripId/availability', requireAuth, createAvailabilityRouter());
+
+  if (config.clientDistPath) {
+    const indexPath = path.resolve(config.clientDistPath, 'index.html');
+    app.use(express.static(config.clientDistPath));
+    app.use((req, res, next) => {
+      if (
+        req.method !== 'GET' ||
+        req.path.startsWith('/api') ||
+        req.path.startsWith('/socket.io')
+      ) {
+        return next();
+      }
+      res.sendFile(indexPath);
+    });
+  }
 
   app.use('/api', notFound);
   app.use(errorHandler);
