@@ -7,6 +7,7 @@ import { createAuthRouter } from './routes/authRoutes.js';
 import { createJoinRouter, createTripRouter } from './routes/tripRoutes.js';
 import { createItineraryRouter } from './routes/itineraryRoutes.js';
 import { createBudgetRouter, createExpenseRouter } from './routes/budgetRoutes.js';
+import { createAvailabilityRouter } from './routes/availabilityRoutes.js';
 
 import { requireAuth } from './middleware/requireAuth.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
