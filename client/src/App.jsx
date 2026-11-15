@@ -10,6 +10,7 @@ import DashboardPage from './pages/DashboardPage.jsx';
 import TripDetailPage from './pages/TripDetailPage.jsx';
 
 import ItineraryPage from './pages/ItineraryPage.jsx';
+import BudgetPage from './pages/BudgetPage.jsx';
 import AvailabilityPage from './pages/AvailabilityPage.jsx';
 import JoinPage from './pages/JoinPage.jsx';
 
@@ -68,6 +69,14 @@ export default function App() {
               element={
                 <RequireAuth>
                   <AvailabilityPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/trips/:tripId/budget"
+              element={
+                <RequireAuth>
+                  <BudgetPage />
                 </RequireAuth>
               }
             />
