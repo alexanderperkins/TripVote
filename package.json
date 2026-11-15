@@ -10,6 +10,8 @@
     "client"
   ],
   "scripts": {
+    "build": "npm run build --workspace client",
+    "start": "npm run start --workspace server",
     "dev": "node scripts/dev.js",
     "test": "npm test --workspaces",
     "lint": "eslint . && prettier --check .",
