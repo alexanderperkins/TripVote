@@ -5,6 +5,7 @@ import { fetchTrip } from '../api/trips.js';
 import { fetchBudget, deleteExpense } from '../api/budget.js';
 import Button from '../components/Button.jsx';
 import LoadingState from '../components/LoadingState.jsx';
+import TripHeader from '../components/TripHeader.jsx';
 import FormError from '../features/auth/FormError.jsx';
 import LogExpenseForm from '../features/budget/LogExpenseForm.jsx';
 import SetBudgetForm from '../features/budget/SetBudgetForm.jsx';
@@ -92,20 +93,11 @@ export default function BudgetPage() {
   const currentUserId = currentMember?.userId ?? user?.id;
 
   return (
-    <section className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ink">Budget</h1>
-          <p className="mt-1 text-muted">
-            {trip.name} – {trip.destination}
-          </p>
-          <p className="mt-2 text-sm text-muted">
-            {trip.startDate} – {trip.endDate}
-          </p>
-        </div>
-        <span className="rounded-full bg-page px-3 py-1 text-sm font-semibold capitalize">
-          {trip.role}
-        </span>
+    <section className="flex flex-col gap-6 pb-24">
+      <TripHeader trip={trip} />
+
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-ink">Budget</h1>
       </div>
 
       <FormError message={actionError} />
