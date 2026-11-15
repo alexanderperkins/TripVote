@@ -71,6 +71,7 @@ export default function App() {
                   <AvailabilityPage />
                 </RequireAuth>
               }
+            />
             <Route
               path="/trips/:tripId/budget"
               element={
