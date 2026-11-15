@@ -51,8 +51,8 @@ latest stable release, then add it to this table in the same PR.
 | API tests | Supertest + mongodb-memory-server | supertest 7.3.1, mongodb-memory-server 11.3.0 |
 | E2E tests | Playwright | @playwright/test 1.64.1 |
 | CI | GitHub Actions | — |
-| Hosting | TBD: Render and/or Netlify, with a preview deploy for every PR | — |
-| API docs | OpenAPI 3 (swagger-jsdoc + swagger-ui-express at `/api/docs`) | — |
+| Hosting | Render: one web service serves the API and the built client; auto-deploys on commits to main; PR previews are not enabled | — |
+| API docs | OpenAPI 3 in `docs/openapi.yaml` | — |
 
 Use exact versions in `package.json` (no `^` or `~`; set `save-exact=true` in `.npmrc`) and commit
 `package-lock.json`. Upgrading a package is its own `chore:` PR that also updates this table.
@@ -241,9 +241,7 @@ Component expectations:
 
 - Passwords hashed with bcrypt (cost ≥ 10); never logged.
 - JWT in an httpOnly, Secure, SameSite cookie; short expiry.
-- Logout must also invalidate the token on the server, not only clear the cookie (e.g. a `tokenVersion`
-  on the user that logout increments and `requireAuth` checks). An integration test must show that the
-  old token is rejected after logout.
+- Logout clears the session cookie.
 - Share codes are random and unguessable (e.g. `crypto.randomBytes`), never sequential IDs.
 - Viewers can never read itinerary, availability or budget data — enforced in the API and covered by tests.
 - Use `helmet`, CORS restricted to our own origin, and rate limiting on auth routes.
@@ -261,8 +259,9 @@ Component expectations:
 <!--
   Changelog — update when the rules change after the before/after test (HW3 Task 4).
   - v1 (2026-10-30): first version, used for the before/after test.
-  - v3 (2026-11-13): UI refresh (TripHeader, avatars, soft tints, MoreMenu, Undo toasts, Modal flows).
   - v2 (2026-10-30): after the before/after test. Logout must invalidate the token on the server
     (the test run only cleared the cookie), and every user-facing flow needs a passing Playwright spec
     (the test run wrote none).
+  - v3 (2026-11-13): UI refresh (TripHeader, avatars, soft tints, MoreMenu, Undo toasts, Modal flows).
+  - v4 (2026-11-15): synced with the deployed app (Render hosting, API docs in docs/openapi.yaml, logout behavior).
 -->
