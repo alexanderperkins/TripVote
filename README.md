@@ -2,6 +2,10 @@
 
 AI Coding Project 2: Full-Stack Application platform that helps groups of friends plan trips together by suggesting activities, voting, and organizing itineraries.
 
+**Live app:** <[TripVote URL](https://tripvote.onrender.com)>
+
+Docs: [API (OpenAPI)](docs/openapi.yaml) · [Architecture](docs/architecture.md) · [Database schema](docs/database-schema.md) · [PRD](PRD.pdf)
+
 Rules for contributors and AI agents: see [AGENTS.md](AGENTS.md).
 
 ## Getting started
@@ -55,8 +59,23 @@ If it fails with `querySrv ECONNREFUSED`, add `DNS_SERVERS=8.8.8.8,1.1.1.1` to `
 | Command | What it does |
 | --- | --- |
 | `npm test` | Runs all tests on a temporary in-memory MongoDB (the first run downloads it), not your Atlas database |
+| `npm run test:e2e` | Runs the Playwright browser tests (they start their own API on a temporary database) |
 | `npm run lint` | ESLint + Prettier check |
 | `npm run format` | Formats the code with Prettier |
+
+## Deployment
+
+The app runs as one Render web service that serves the API and the built client, with the database on MongoDB Atlas. Render rebuilds and redeploys on every commit to `main`.
+
+| Setting | Value |
+| --- | --- |
+| Build command | `npm install --include=dev && npm run build` |
+| Start command | `npm start` |
+| Environment variables | `NODE_ENV=production`, `MONGODB_URI`, `JWT_SECRET` (values are set in Render, never in the repo) |
+
+In Atlas, Network Access must allow Render's connections (`0.0.0.0/0` is the simple choice for a class project). Use a different `JWT_SECRET` in production than in development.
+
+CI (`.github/workflows/ci.yml`) runs on every pull request: lint, unit and integration tests, a dependency audit, and the Playwright end-to-end tests in a separate job.
 
 ## Folder structure
 
