@@ -137,26 +137,54 @@ export default function BudgetPage() {
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-bold text-ink">Category Breakdown</h2>
           <div className="flex flex-col gap-3">
-            {budget.byCategory.map((cat) => (
-              <div
-                key={cat.category}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-border bg-card p-4"
-              >
-                <div>
-                  <span className="font-semibold capitalize text-ink">
-                    {CATEGORY_DISPLAY[cat.category] || cat.category}
-                  </span>
-                  <div className="text-sm text-muted">
-                    {formatCents(cat.spentCents)} of {formatCents(cat.plannedCents)}
+            {budget.byCategory.map((cat) => {
+              const isOverBudget = cat.overBudgetCents > 0;
+              const percentage =
+                cat.plannedCents > 0
+                  ? Math.min(100, Math.round((cat.spentCents / cat.plannedCents) * 100))
+                  : cat.spentCents > 0
+                    ? 100
+                    : 0;
+              const barColor = isOverBudget ? 'bg-danger' : 'bg-primary';
+
+              return (
+                <div
+                  key={cat.category}
+                  className="flex flex-col gap-2 rounded-card border border-border bg-card p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <span className="font-semibold capitalize text-ink">
+                        {CATEGORY_DISPLAY[cat.category] || cat.category}
+                      </span>
+                      <div className="text-sm text-muted">
+                        {formatCents(cat.spentCents)} of {formatCents(cat.plannedCents)}
+                      </div>
+                    </div>
+                    {isOverBudget && (
+                      <p className="text-sm font-semibold text-danger">
+                        Over budget by {formatCents(cat.overBudgetCents)}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Progress bar */}
+                  <div
+                    role="progressbar"
+                    aria-label={`${CATEGORY_DISPLAY[cat.category] || cat.category} budget spent`}
+                    aria-valuenow={cat.spentCents}
+                    aria-valuemin={0}
+                    aria-valuemax={Math.max(cat.plannedCents, cat.spentCents)}
+                    className="h-2.5 w-full overflow-hidden rounded-full bg-border"
+                  >
+                    <div
+                      className={`h-full rounded-full transition-all ${barColor}`}
+                      style={{ width: `${percentage}%` }}
+                    />
                   </div>
                 </div>
-                {cat.overBudgetCents > 0 && (
-                  <p className="text-sm font-semibold text-danger">
-                    Over budget by {formatCents(cat.overBudgetCents)}
-                  </p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
