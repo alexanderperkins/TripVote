@@ -81,3 +81,9 @@ CI (`.github/workflows/ci.yml`) runs on every pull request: lint, unit and integ
 
 `client/` is the React + Vite frontend, `server/` is the Express API, `e2e/` holds Playwright specs and `docs/`
 holds API docs and diagrams. See AGENTS.md section 1.3 for the full layout.
+
+## Individual reflections
+
+### Yanli Wang
+
+[Yanli Wang's individual reflection (Google Doc)](https://docs.google.com/document/d/1D0S690hxxg0_-m66EObYTMYsnYIhmWSwMXMyDRg2zAs/edit?usp=sharing)
