@@ -19,7 +19,8 @@ Standups were a mix of two live calls and written check-ins in Slack. Entries ar
 | Who | Done | Next | Blockers |
 | --- | --- | --- | --- |
 | Alex | Finished issue 8 | Issue 12 | Limited availability |
-| Yanli | Opened PRs for voting and live updates, plus a UI refactor | Issue 11 | None |
+| Yanli | Opened PRs for voting (#9) and live updates (#10) | UI refresh | None |
+| Yanli | Opened the UI refresh PR (#28) | Issue 11 | None |
 | Alex | Merged budget work, cleaned up merge conflicts | Deployment | Conflicts after the history rewrite |
 | Yanli | Finished availability, rewrote history on main | Demo video | Needed us to resync |
 | Alex | Fixed the budget page layout, deployed to Render | Docs, README | None |
