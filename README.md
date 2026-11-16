@@ -87,3 +87,4 @@ holds API docs and diagrams. See AGENTS.md section 1.3 for the full layout.
 ### Yanli Wang
 
 [Yanli Wang's individual reflection (Google Doc)](https://docs.google.com/document/d/1D0S690hxxg0_-m66EObYTMYsnYIhmWSwMXMyDRg2zAs/edit?usp=sharing)
+[Alex Perkins' individual reflection (Google Doc)](https://docs.google.com/document/d/1KZov59HFlHtQga99LzePhlFKgNi-pkKEBa5FH3SA9BI/edit?tab=t.0)
