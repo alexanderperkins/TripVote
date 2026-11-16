@@ -24,4 +24,3 @@ Standups were a mix of two live calls and written check-ins in Slack. Entries ar
 | Yanli | Finished availability, rewrote history on main | Demo video | Needed us to resync |
 | Alex | Fixed the budget page layout, deployed to Render | Docs, README | None |
 | Alex | Docs, diagrams, AGENTS.md update | Demo video | None |
-| Yanli | Reviewed and merged Alex's docs PRs (#38–#42: AGENTS.md sync, README, contribution log, retrospectives, standups) and updated the PR template (#32) | Record the demo video, write my reflection | None |
